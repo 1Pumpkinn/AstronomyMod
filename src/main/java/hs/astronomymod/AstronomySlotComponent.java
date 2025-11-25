@@ -1,36 +1,28 @@
 package hs.astronomymod;
 
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.registry.RegistryWrapper;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class AstronomySlotComponent {
+    private static final Map<UUID, AstronomySlotComponent> PLAYER_COMPONENTS = new HashMap<>();
+
     private ItemStack astronomyStack = ItemStack.EMPTY;
     private int cooldown = 0;
 
     public static AstronomySlotComponent get(ServerPlayerEntity player) {
-        // This stores component data in player NBT
-        NbtCompound nbt = player.getPersistentData();
-        AstronomySlotComponent component = new AstronomySlotComponent();
+        UUID uuid = player.getUuid();
+        AstronomySlotComponent component = PLAYER_COMPONENTS.get(uuid);
 
-        if (nbt.contains("AstronomySlot")) {
-            NbtCompound slotData = nbt.getCompound("AstronomySlot");
-            RegistryWrapper.WrapperLookup registryLookup = player.getRegistryManager();
-            component.astronomyStack = ItemStack.fromNbt(registryLookup, slotData.getCompound("Item")).orElse(ItemStack.EMPTY);
-            component.cooldown = slotData.getInt("Cooldown");
+        if (component == null) {
+            component = new AstronomySlotComponent();
+            PLAYER_COMPONENTS.put(uuid, component);
         }
 
         return component;
-    }
-
-    public void save(ServerPlayerEntity player) {
-        NbtCompound nbt = player.getPersistentData();
-        NbtCompound slotData = new NbtCompound();
-        RegistryWrapper.WrapperLookup registryLookup = player.getRegistryManager();
-        slotData.put("Item", astronomyStack.encode(registryLookup));
-        slotData.putInt("Cooldown", cooldown);
-        nbt.put("AstronomySlot", slotData);
     }
 
     public void tick(ServerPlayerEntity player) {
