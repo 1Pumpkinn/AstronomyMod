@@ -1,5 +1,6 @@
-package hs.astronomymod;
+package hs.astronomymod.item.custom;
 
+import hs.astronomymod.AstronomyItem;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;

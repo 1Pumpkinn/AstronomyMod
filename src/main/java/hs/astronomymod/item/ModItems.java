@@ -1,6 +1,7 @@
 package hs.astronomymod.item;
 
 import hs.astronomymod.*;
+import hs.astronomymod.item.custom.*;
 import net.minecraft.item.Item;
 import net.minecraft.item.BlockItem;
 import net.minecraft.registry.Registry;
