@@ -9,33 +9,43 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class PlanetItem extends AstronomyItem {
+
     public PlanetItem(Settings settings) {
         super(settings);
     }
 
     @Override
     public void applyPassiveAbility(ServerPlayerEntity player) {
-        // Passive: Increased gravity resistance (slow falling effect)
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 40, 0, false, false, false));
+        // Passive: slow falling
+        player.addStatusEffect(new StatusEffectInstance(
+                StatusEffects.SLOW_FALLING, 40, 0, false, false, false
+        ));
 
-        // Upside 1: Regeneration
+        // Regen every 3 seconds
         if (player.age % 60 == 0) {
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.REGENERATION, 60, 0, false, false, true));
+            player.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.REGENERATION, 60, 0, false, false, true
+            ));
         }
     }
 
     @Override
     public void applyActiveAbility(ServerPlayerEntity player) {
-        // Active: Gravitational Pull - pulls nearby entities (simulated with slow)
-        List<net.minecraft.entity.LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
-                net.minecraft.entity.LivingEntity.class,
-                player.getBoundingBox().expand(10),
-                e -> e != player
-        );
+
+        // Gravitational pull effect
+        List<net.minecraft.entity.LivingEntity> entities =
+                player.getEntityWorld().getEntitiesByClass(
+                        net.minecraft.entity.LivingEntity.class,
+                        player.getBoundingBox().expand(10),
+                        e -> e != player
+                );
+
         entities.forEach(entity -> {
             entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 100, 2));
-            // Upside 2: Damage resistance when using active ability
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 100, 1, false, false, true));
+
+            player.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.RESISTANCE, 100, 1, false, false, true
+            ));
         });
     }
 
