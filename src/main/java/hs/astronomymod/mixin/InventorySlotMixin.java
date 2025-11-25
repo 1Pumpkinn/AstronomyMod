@@ -2,6 +2,8 @@ package hs.astronomymod.mixin;
 
 import hs.astronomymod.client.AstronomySlotComponent;
 import hs.astronomymod.item.AstronomyItem;
+import net.minecraft.client.gl.RenderPipelines;
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
@@ -14,6 +16,7 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(InventoryScreen.class)
 public abstract class InventorySlotMixin extends HandledScreen<PlayerScreenHandler> {
@@ -28,10 +31,10 @@ public abstract class InventorySlotMixin extends HandledScreen<PlayerScreenHandl
     @Inject(method = "drawBackground", at = @At("TAIL"))
     private void drawAstronomySlot(DrawContext context, float delta, int mouseX, int mouseY, CallbackInfo ci) {
 
-        int slotX = x + backgroundWidth + 6;
-        int slotY = y + 24;
+        int slotX = x + 176;
+        int slotY = y + 8;
 
-        context.drawTexture(ASTRONOMY_SLOT_TEXTURE, slotX, slotY, 0, 0, 18, 18, 256, 256);
+        context.drawTexture(RenderPipelines.GUI_TEXTURED, ASTRONOMY_SLOT_TEXTURE, slotX, slotY, 0f, 0f, 18, 18, 18, 18, 256, 256, 0xFFFFFFFF);
 
         ItemStack stack = AstronomySlotComponent.getClient().getAstronomyStack();
         if (!stack.isEmpty()) {
@@ -39,18 +42,18 @@ public abstract class InventorySlotMixin extends HandledScreen<PlayerScreenHandl
         }
     }
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
-    private void clickAstronomySlot(double mouseX, double mouseY, int button, CallbackInfo ci) {
+    public boolean mouseClicked(Click click, boolean doubled) {
+        int slotX = x + 176;
+        int slotY = y + 8;
 
-        int slotX = x + backgroundWidth + 6;
-        int slotY = y + 24;
-
-        if (mouseX >= slotX && mouseX < slotX + 18 &&
-                mouseY >= slotY && mouseY < slotY + 18) {
+        if (click.x() >= slotX && click.x() < slotX + 18 &&
+                click.y() >= slotY && click.y() < slotY + 18) {
 
             handleCustomSlotClick();
-            ci.cancel();
+            return true;
         }
+
+        return super.mouseClicked(click, doubled);
     }
 
     private void handleCustomSlotClick() {
