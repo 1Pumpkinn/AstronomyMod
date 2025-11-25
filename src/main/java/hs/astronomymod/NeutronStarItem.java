@@ -1,38 +1,49 @@
 package hs.astronomymod;
 
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+
+import java.util.List;
+import java.util.function.Consumer;
+
 public class NeutronStarItem extends AstronomyItem {
-    public NeutronStarItem(Properties properties) {
-        super(properties);
+    public NeutronStarItem(Settings settings) {
+        super(settings);
     }
 
     @Override
-    public void applyPassiveAbility(ServerPlayer player) {
+    public void applyPassiveAbility(ServerPlayerEntity player) {
         // Passive: Extreme density - knockback resistance
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, 1, false, false, false));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 40, 1, false, false, false));
 
         // Upside 1: Increased attack damage
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 1, false, false, true));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, 40, 1, false, false, true));
     }
 
     @Override
-    public void applyActiveAbility(ServerPlayer player) {
+    public void applyActiveAbility(ServerPlayerEntity player) {
         // Active: Magnetic Field - stun nearby enemies
-        player.level().getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class,
-                player.getBoundingBox().inflate(7),
-                e -> e != player).forEach(entity -> {
-            entity.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 10));
-            entity.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+        List<net.minecraft.entity.LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
+                net.minecraft.entity.LivingEntity.class,
+                player.getBoundingBox().expand(7),
+                e -> e != player
+        );
+        entities.forEach(entity -> {
+            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 100, 10));
+            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 100, 1));
         });
 
         // Upside 2: Haste boost
-        player.addEffect(new MobEffectInstance(MobEffects.DIG_SPEED, 200, 2, false, false, true));
+        player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 200, 2, false, false, true));
     }
 
     @Override
-    protected void addCustomTooltip(List<Component> tooltipComponents) {
-        tooltipComponents.add(Component.literal("§7Passive: Dense Armor"));
-        tooltipComponents.add(Component.literal("§fActive: Magnetic Field"));
-        tooltipComponents.add(Component.literal("§e+ Strength"));
-        tooltipComponents.add(Component.literal("§e+ Haste when active"));
+    protected void addCustomTooltip(Consumer<Text> tooltip) {
+        tooltip.accept(Text.literal("§7Passive: Dense Armor"));
+        tooltip.accept(Text.literal("§fActive: Magnetic Field"));
+        tooltip.accept(Text.literal("§e+ Strength"));
+        tooltip.accept(Text.literal("§e+ Haste when active"));
     }
 }

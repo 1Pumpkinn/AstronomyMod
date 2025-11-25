@@ -17,7 +17,7 @@
       "hs.astronomymod.client.AstronomymodClient"
     ],
     "main": [
-      "hs.astronomymod.Astronomymod"
+      "hs.astronomymod.AstronomyMod"
     ]
   },
   "mixins": [
