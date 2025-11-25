@@ -22,9 +22,10 @@ public class AstronomyPackets {
     public static void registerC2SPackets() {
         PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
 
-        ServerPlayNetworking.registerGlobalReceiver(ACTIVATE_ABILITY_ID, (payload, player) -> {
-            // Schedule on server thread
-            player.getWorld().getServer().execute(() -> {
+        ServerPlayNetworking.registerGlobalReceiver(ACTIVATE_ABILITY_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component != null) {
                     component.activateAbility(player);
