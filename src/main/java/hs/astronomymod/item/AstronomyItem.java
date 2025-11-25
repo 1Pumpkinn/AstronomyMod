@@ -1,11 +1,12 @@
-package hs.astronomymod;
+package hs.astronomymod.item;
 
-import net.minecraft.component.type.TooltipDisplayComponent;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.tooltip.TooltipType;
 import net.minecraft.text.Text;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.component.type.TooltipDisplayComponent;
 
 import java.util.function.Consumer;
 
@@ -15,8 +16,14 @@ public abstract class AstronomyItem extends Item {
         super(settings);
     }
 
+    // --- Server-only logic ---
     public abstract void applyPassiveAbility(ServerPlayerEntity player);
     public abstract void applyActiveAbility(ServerPlayerEntity player);
+
+    // --- Client-only logic (optional visuals) ---
+    public void applyPassiveAbilityClient(ClientPlayerEntity player) {
+        // Default: do nothing, can be overridden in subclasses
+    }
 
     @Override
     public void appendTooltip(

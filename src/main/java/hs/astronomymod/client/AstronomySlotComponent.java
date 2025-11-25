@@ -1,5 +1,7 @@
-package hs.astronomymod;
+package hs.astronomymod.client;
 
+import hs.astronomymod.item.AstronomyItem;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 
@@ -8,33 +10,46 @@ import java.util.Map;
 import java.util.UUID;
 
 public class AstronomySlotComponent {
+
+    // Server-side map for each player
     private static final Map<UUID, AstronomySlotComponent> PLAYER_COMPONENTS = new HashMap<>();
+
+    // Client-side singleton instance
+    public static final AstronomySlotComponent CLIENT_INSTANCE = new AstronomySlotComponent();
 
     private ItemStack astronomyStack = ItemStack.EMPTY;
     private int cooldown = 0;
 
+    // --- Server-side access ---
     public static AstronomySlotComponent get(ServerPlayerEntity player) {
         UUID uuid = player.getUuid();
-        AstronomySlotComponent component = PLAYER_COMPONENTS.get(uuid);
-
-        if (component == null) {
-            component = new AstronomySlotComponent();
-            PLAYER_COMPONENTS.put(uuid, component);
-        }
-
-        return component;
+        return PLAYER_COMPONENTS.computeIfAbsent(uuid, k -> new AstronomySlotComponent());
     }
 
-    public void tick(ServerPlayerEntity player) {
+    // --- Client-side access ---
+    public static AstronomySlotComponent getClient() {
+        return CLIENT_INSTANCE;
+    }
+
+    // --- Server tick ---
+    public void tickServer(ServerPlayerEntity player) {
         if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem) {
-            astronomyItem.applyPassiveAbility(player);
+            astronomyItem.applyPassiveAbility(player); // server logic
         }
 
-        if (cooldown > 0) {
-            cooldown--;
-        }
+        if (cooldown > 0) cooldown--;
     }
 
+    // --- Client tick ---
+    public void tickClient(ClientPlayerEntity player) {
+        if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem) {
+            astronomyItem.applyPassiveAbilityClient(player); // safe client call
+        }
+        if (cooldown > 0) cooldown--;
+    }
+
+
+    // --- Activate ability (server only) ---
     public void activateAbility(ServerPlayerEntity player) {
         if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem && cooldown <= 0) {
             astronomyItem.applyActiveAbility(player);
@@ -42,6 +57,7 @@ public class AstronomySlotComponent {
         }
     }
 
+    // --- Getters & setters ---
     public ItemStack getAstronomyStack() {
         return astronomyStack;
     }

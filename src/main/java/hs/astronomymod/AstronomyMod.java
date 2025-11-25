@@ -1,5 +1,7 @@
 package hs.astronomymod;
 
+import hs.astronomymod.client.AstronomySlotComponent;
+import hs.astronomymod.command.AstronomyCommands;
 import hs.astronomymod.item.ModItems;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -15,13 +17,14 @@ public class AstronomyMod implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Astronomy Mod Initializing...");
         ModItems.registerModItems();
+        AstronomyCommands.register();
 
 
         // Tick event for abilities
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 AstronomySlotComponent comp = AstronomySlotComponent.get(player);
-                if (comp != null) comp.tick(player);
+                if (comp != null) comp.tickServer(player); // <-- call tickServer
             }
         });
 

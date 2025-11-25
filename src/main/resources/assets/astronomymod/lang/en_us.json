@@ -1,0 +1,11 @@
+{
+  "item.astronomymod.planet": "Planet",
+  "item.astronomymod.supernova": "Supernova",
+  "item.astronomymod.blackhole": "Black Hole",
+  "item.astronomymod.neutron_star": "Neutron Star",
+  "item.astronomymod.pulsar": "Pulsar",
+
+  "category.astronomymod.astronomy": "Astronomy Mod",
+  "key.astronomymod.activate_ability": "Activate Astronomy Ability",
+  "key.astronomymod.select_slot": "Select Astronomy Slot"
+}
