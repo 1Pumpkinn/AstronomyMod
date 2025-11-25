@@ -3,11 +3,9 @@ package hs.astronomymod.client;
 import hs.astronomymod.client.screen.AstronomySlotScreen;
 import hs.astronomymod.network.AstronomyPackets;
 import net.fabricmc.api.ClientModInitializer;
-
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 
 public class AstronomymodClient implements ClientModInitializer {
@@ -21,11 +19,18 @@ public class AstronomymodClient implements ClientModInitializer {
         ModKeybindings.registerKeybindings();
         AstronomyPackets.registerS2CPackets();
 
+        // Register sync packet receiver
+        ClientPlayNetworking.registerGlobalReceiver(AstronomyPackets.SYNC_SLOT_ID, (payload, context) -> {
+            context.client().execute(() -> {
+                // This would sync from server if needed
+            });
+        });
+
         MinecraftClient client = MinecraftClient.getInstance();
 
         // HUD render event
         HudRenderCallback.EVENT.register((context, tickDelta) -> {
-            if (client.player != null && !client.options.hudHidden) {
+            if (client.player != null && !client.options.hudHidden && client.currentScreen == null) {
                 astronomySlotScreen.render(
                         context,
                         client.getWindow().getScaledWidth(),
@@ -44,6 +49,11 @@ public class AstronomymodClient implements ClientModInitializer {
 
             while (ModKeybindings.SELECT_ASTRONOMY_SLOT.wasPressed()) {
                 astronomySlotScreen.setSelectedSlot(0);
+            }
+
+            // Tick client component
+            if (c.player != null) {
+                AstronomySlotComponent.getClient().tickClient(c.player);
             }
         });
     }

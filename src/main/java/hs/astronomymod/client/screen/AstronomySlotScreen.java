@@ -18,9 +18,8 @@ public class AstronomySlotScreen {
     private int selectedSlot = 0;
 
     public void render(DrawContext context, int screenWidth, int screenHeight) {
-        int x = SLOT_PADDING;
-        int y = screenHeight / 2 - SLOT_SIZE / 2;
-
+        int x = screenWidth / 2 - 91 - SLOT_SIZE - 4;
+        int y = screenHeight - 23;
         // Draw slot background
         context.drawTexture(
                 RenderPipelines.GUI_TEXTURED,

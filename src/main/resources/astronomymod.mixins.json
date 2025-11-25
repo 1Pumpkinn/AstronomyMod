@@ -3,10 +3,10 @@
   "package": "hs.astronomymod.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MouseScrollMixin"
+    "InventorySlotMixin"
   ],
   "client": [
-    "MouseScrollMixin"
+    "InventorySlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1

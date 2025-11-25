@@ -3,6 +3,7 @@ package hs.astronomymod;
 import hs.astronomymod.client.AstronomySlotComponent;
 import hs.astronomymod.command.AstronomyCommands;
 import hs.astronomymod.item.ModItems;
+import hs.astronomymod.network.AstronomyPackets;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -19,12 +20,14 @@ public class AstronomyMod implements ModInitializer {
         ModItems.registerModItems();
         AstronomyCommands.register();
 
+        // Register C2S packets
+        AstronomyPackets.registerC2SPackets();
 
         // Tick event for abilities
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
                 AstronomySlotComponent comp = AstronomySlotComponent.get(player);
-                if (comp != null) comp.tickServer(player); // <-- call tickServer
+                if (comp != null) comp.tickServer(player);
             }
         });
 

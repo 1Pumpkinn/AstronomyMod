@@ -20,8 +20,10 @@ public class AstronomyPackets {
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "sync_slot"));
 
     public static void registerC2SPackets() {
+        // Register the payload type for C2S
         PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
 
+        // Register the receiver
         ServerPlayNetworking.registerGlobalReceiver(ACTIVATE_ABILITY_ID, (payload, context) -> {
             context.server().execute(() -> {
                 var player = context.player();
