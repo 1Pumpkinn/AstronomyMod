@@ -1,5 +1,6 @@
 package hs.astronomymod.item;
 
+import hs.astronomymod.abilities.Ability;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -12,17 +13,31 @@ import java.util.function.Consumer;
 
 public abstract class AstronomyItem extends Item {
 
-    public AstronomyItem(Settings settings) {
+    private final Ability ability;
+
+    public AstronomyItem(Settings settings, Ability ability) {
         super(settings);
+        this.ability = ability;
     }
 
     // --- Server-only logic ---
-    public abstract void applyPassiveAbility(ServerPlayerEntity player);
-    public abstract void applyActiveAbility(ServerPlayerEntity player);
+    public void applyPassiveAbility(ServerPlayerEntity player) {
+        if (ability != null) {
+            ability.applyPassive(player);
+        }
+    }
+
+    public void applyActiveAbility(ServerPlayerEntity player) {
+        if (ability != null) {
+            ability.applyActive(player);
+        }
+    }
 
     // --- Client-only logic (optional visuals) ---
     public void applyPassiveAbilityClient(ClientPlayerEntity player) {
-        // Default: do nothing, can be overridden in subclasses
+        if (ability != null) {
+            ability.applyPassiveClient(player);
+        }
     }
 
     @Override
