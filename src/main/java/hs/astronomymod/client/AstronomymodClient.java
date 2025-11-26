@@ -1,11 +1,12 @@
 package hs.astronomymod.client;
 
+import hs.astronomymod.AstronomyMod;
 import hs.astronomymod.client.screen.AstronomySlotScreen;
 import hs.astronomymod.network.AstronomyPackets;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
 
 public class AstronomymodClient implements ClientModInitializer {
@@ -15,16 +16,10 @@ public class AstronomymodClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        AstronomyMod.LOGGER.info("Astronomy Mod Client Initializing...");
 
         ModKeybindings.registerKeybindings();
         AstronomyPackets.registerS2CPackets();
-
-        // Register sync packet receiver
-        ClientPlayNetworking.registerGlobalReceiver(AstronomyPackets.SYNC_SLOT_ID, (payload, context) -> {
-            context.client().execute(() -> {
-                // This would sync from server if needed
-            });
-        });
 
         MinecraftClient client = MinecraftClient.getInstance();
 
@@ -43,19 +38,26 @@ public class AstronomymodClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(c -> {
             if (scrollCooldown > 0) scrollCooldown--;
 
+            // Activate ability keybind
             while (ModKeybindings.ACTIVATE_ASTRONOMY_ABILITY.wasPressed()) {
-                ClientPlayNetworking.send(new AstronomyPackets.ActivateAbilityPayload());
+                if (ClientPlayNetworking.canSend(AstronomyPackets.ACTIVATE_ABILITY_ID)) {
+                    ClientPlayNetworking.send(new AstronomyPackets.ActivateAbilityPayload());
+                    AstronomyMod.LOGGER.info("Sent activate ability packet");
+                }
             }
 
+            // Select slot keybind
             while (ModKeybindings.SELECT_ASTRONOMY_SLOT.wasPressed()) {
                 astronomySlotScreen.setSelectedSlot(0);
             }
 
-            // Tick client component
+            // Tick client component for client-side effects
             if (c.player != null) {
                 AstronomySlotComponent.getClient().tickClient(c.player);
             }
         });
+
+        AstronomyMod.LOGGER.info("Astronomy Mod Client Initialized!");
     }
 
     // Called by mixin
