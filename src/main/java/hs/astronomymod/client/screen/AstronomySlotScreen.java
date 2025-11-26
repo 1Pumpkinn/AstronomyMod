@@ -13,13 +13,13 @@ import net.minecraft.util.Identifier;
 public class AstronomySlotScreen {
     private static final Identifier SLOT_TEXTURE = Identifier.of(AstronomyMod.MOD_ID, "textures/gui/astronomy_slot.png");
     private static final int SLOT_SIZE = 22;
-    private static final int SLOT_PADDING = 2;
 
     private int selectedSlot = 0;
 
     public void render(DrawContext context, int screenWidth, int screenHeight) {
         int x = screenWidth / 2 - 91 - SLOT_SIZE - 4;
         int y = screenHeight - 23;
+
         // Draw slot background
         context.drawTexture(
                 RenderPipelines.GUI_TEXTURED,
@@ -46,13 +46,12 @@ public class AstronomySlotScreen {
             );
         }
 
-        // Draw item in slot
-        AstronomySlotComponent component = AstronomySlotComponent.CLIENT_INSTANCE;
-        if (component != null) {
-            ItemStack stack = component.getAstronomyStack();
-            if (!stack.isEmpty()) {
-                context.drawItem(stack, x + 3, y + 3);
-            }
+        // Draw item in slot from client component
+        AstronomySlotComponent component = AstronomySlotComponent.getClient();
+        ItemStack stack = component.getAstronomyStack();
+
+        if (!stack.isEmpty()) {
+            context.drawItem(stack, x + 3, y + 3);
         }
     }
 

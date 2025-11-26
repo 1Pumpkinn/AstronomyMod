@@ -9,10 +9,8 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
 import net.minecraft.network.packet.CustomPayload;
 import net.minecraft.util.Identifier;
-
 
 public class AstronomyPackets {
 
@@ -34,6 +32,7 @@ public class AstronomyPackets {
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component != null) {
                     component.activateAbility(player);
+                    AstronomyMod.LOGGER.info("Player {} activated astronomy ability", player.getName().getString());
                 }
             });
         });
@@ -47,21 +46,25 @@ public class AstronomyPackets {
                 if (component != null) {
                     ItemStack stack = payload.stack();
 
-                    // Validate that the item is an AstronomyItem
+                    // Validate that the item is an AstronomyItem or empty
                     if (!stack.isEmpty() && !(stack.getItem() instanceof AstronomyItem)) {
-                        AstronomyMod.LOGGER.warn("Player " + player.getName().getString() +
-                                " attempted to place non-astronomy item in slot: " + stack.getName().getString());
-                        // Send back the current valid stack
-                        ServerPlayNetworking.send(player, new SyncSlotPayload(0));
+                        AstronomyMod.LOGGER.warn("Player {} attempted to place non-astronomy item in slot: {}",
+                                player.getName().getString(), stack.getName().getString());
+                        // Reject and sync back current state
+                        ItemStack currentStack = component.getAstronomyStack();
+                        ServerPlayNetworking.send(player, new SyncSlotPayload(currentStack));
                         return;
                     }
 
+                    // Update server-side component
                     component.setAstronomyStack(stack);
-                    AstronomyMod.LOGGER.info("Updated astronomy slot for player: " +
-                            player.getName().getString() + " with item: " +
-                            (stack.isEmpty() ? "EMPTY" : stack.getName().getString()));
-                    // Always sync back to client to confirm stack
-                    ServerPlayNetworking.send(player, new SyncSlotPayload(0));
+
+                    AstronomyMod.LOGGER.info("Updated astronomy slot for player: {} with item: {}",
+                            player.getName().getString(),
+                            stack.isEmpty() ? "EMPTY" : stack.getName().getString());
+
+                    // Sync back to client to confirm
+                    ServerPlayNetworking.send(player, new SyncSlotPayload(stack));
                 }
             });
         });
@@ -73,13 +76,19 @@ public class AstronomyPackets {
         // Register client handler for sync packets
         ClientPlayNetworking.registerGlobalReceiver(SYNC_SLOT_ID, (payload, context) -> {
             context.client().execute(() -> {
-                // This is just a signal to refresh from server
-                // In a full implementation, you'd send the actual ItemStack here
-                AstronomyMod.LOGGER.info("Received sync request from server");
+                AstronomySlotComponent clientComponent = AstronomySlotComponent.getClient();
+                ItemStack syncedStack = payload.stack();
+
+                // Update client-side component with server's authoritative state
+                clientComponent.setAstronomyStack(syncedStack);
+
+                AstronomyMod.LOGGER.info("Client received sync: {}",
+                        syncedStack.isEmpty() ? "EMPTY" : syncedStack.getName().getString());
             });
         });
     }
 
+    // Payload Records
     public record ActivateAbilityPayload() implements CustomPayload {
         public static final PacketCodec<RegistryByteBuf, ActivateAbilityPayload> CODEC =
                 PacketCodec.unit(new ActivateAbilityPayload());
@@ -90,10 +99,10 @@ public class AstronomyPackets {
         }
     }
 
-    public record SyncSlotPayload(int slot) implements CustomPayload {
+    public record SyncSlotPayload(ItemStack stack) implements CustomPayload {
         public static final PacketCodec<RegistryByteBuf, SyncSlotPayload> CODEC =
                 PacketCodec.tuple(
-                        PacketCodecs.VAR_INT, SyncSlotPayload::slot,
+                        ItemStack.OPTIONAL_PACKET_CODEC, SyncSlotPayload::stack,
                         SyncSlotPayload::new
                 );
 
@@ -106,7 +115,7 @@ public class AstronomyPackets {
     public record UpdateSlotPayload(ItemStack stack) implements CustomPayload {
         public static final PacketCodec<RegistryByteBuf, UpdateSlotPayload> CODEC =
                 PacketCodec.tuple(
-                        ItemStack.PACKET_CODEC, UpdateSlotPayload::stack,
+                        ItemStack.OPTIONAL_PACKET_CODEC, UpdateSlotPayload::stack,
                         UpdateSlotPayload::new
                 );
 
