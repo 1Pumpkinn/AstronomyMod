@@ -27,26 +27,27 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> {
         if (!((Object) this instanceof InventoryScreen)) {
             return;
         }
-        
+
         double mouseX = click.x();
         double mouseY = click.y();
         int button = click.button();
-        
+
         HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
         int guiLeft = (screen.width - 176) / 2;
         int guiTop = (screen.height - 166) / 2;
-        int slotX = guiLeft + 98;
-        int slotY = guiTop + 44;
+        int slotX = guiLeft + 76;
+        int slotY = guiTop + 42;
 
         if (mouseX >= slotX && mouseX < slotX + SLOT_SIZE &&
-            mouseY >= slotY && mouseY < slotY + SLOT_SIZE) {
-            
+                mouseY >= slotY && mouseY < slotY + SLOT_SIZE) {
+
             AstronomySlotComponent comp = AstronomySlotComponent.getClient();
             ItemStack slotStack = comp.getAstronomyStack();
             ItemStack cursorStack = screen.getScreenHandler().getCursorStack();
 
-            if (button == 0) {
+            if (button == 0) { // Left click
                 if (!cursorStack.isEmpty()) {
+                    // Only allow AstronomyItem to be placed
                     if (cursorStack.getItem() instanceof AstronomyItem) {
                         ItemStack oldStack = slotStack.copy();
                         comp.setAstronomyStack(cursorStack.copy());
@@ -55,6 +56,7 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> {
                         astronomy$playClickSound();
                     }
                 } else {
+                    // Pick up item from slot
                     if (!slotStack.isEmpty()) {
                         screen.getScreenHandler().setCursorStack(slotStack.copy());
                         comp.setAstronomyStack(ItemStack.EMPTY);
@@ -62,11 +64,18 @@ public abstract class HandledScreenMixin<T extends ScreenHandler> {
                         astronomy$playClickSound();
                     }
                 }
-            } else if (button == 1) {
+            } else if (button == 1) { // Right click
                 if (!cursorStack.isEmpty() && cursorStack.getItem() instanceof AstronomyItem && slotStack.isEmpty()) {
-                    ItemStack singleItem = cursorStack.split(1);
+                    ItemStack singleItem = cursorStack.copyWithCount(1);
                     comp.setAstronomyStack(singleItem);
+                    cursorStack.decrement(1);
                     astronomy$sendSlotUpdate(singleItem);
+                    astronomy$playClickSound();
+                } else if (cursorStack.isEmpty() && !slotStack.isEmpty()) {
+                    // Pick up from slot on right click
+                    screen.getScreenHandler().setCursorStack(slotStack.copy());
+                    comp.setAstronomyStack(ItemStack.EMPTY);
+                    astronomy$sendSlotUpdate(ItemStack.EMPTY);
                     astronomy$playClickSound();
                 }
             }

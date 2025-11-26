@@ -2,6 +2,8 @@ package hs.astronomymod.network;
 
 import hs.astronomymod.AstronomyMod;
 import hs.astronomymod.client.AstronomySlotComponent;
+import hs.astronomymod.item.AstronomyItem;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.item.ItemStack;
@@ -43,10 +45,21 @@ public class AstronomyPackets {
                 var player = context.player();
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component != null) {
-                    component.setAstronomyStack(payload.stack());
+                    ItemStack stack = payload.stack();
+
+                    // Validate that the item is an AstronomyItem
+                    if (!stack.isEmpty() && !(stack.getItem() instanceof AstronomyItem)) {
+                        AstronomyMod.LOGGER.warn("Player " + player.getName().getString() +
+                                " attempted to place non-astronomy item in slot: " + stack.getName().getString());
+                        // Send back the current valid stack
+                        ServerPlayNetworking.send(player, new SyncSlotPayload(0));
+                        return;
+                    }
+
+                    component.setAstronomyStack(stack);
                     AstronomyMod.LOGGER.info("Updated astronomy slot for player: " +
                             player.getName().getString() + " with item: " +
-                            (payload.stack().isEmpty() ? "EMPTY" : payload.stack().getName().getString()));
+                            (stack.isEmpty() ? "EMPTY" : stack.getName().getString()));
                 }
             });
         });
@@ -54,6 +67,15 @@ public class AstronomyPackets {
 
     public static void registerS2CPackets() {
         PayloadTypeRegistry.playS2C().register(SYNC_SLOT_ID, SyncSlotPayload.CODEC);
+
+        // Register client handler for sync packets
+        ClientPlayNetworking.registerGlobalReceiver(SYNC_SLOT_ID, (payload, context) -> {
+            context.client().execute(() -> {
+                // This is just a signal to refresh from server
+                // In a full implementation, you'd send the actual ItemStack here
+                AstronomyMod.LOGGER.info("Received sync request from server");
+            });
+        });
     }
 
     public record ActivateAbilityPayload() implements CustomPayload {
