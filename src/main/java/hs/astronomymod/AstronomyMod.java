@@ -2,6 +2,7 @@ package hs.astronomymod;
 
 import hs.astronomymod.client.AstronomySlotComponent;
 import hs.astronomymod.command.AstronomyCommands;
+import hs.astronomymod.component.ModComponents;
 import hs.astronomymod.item.ModItems;
 import hs.astronomymod.network.AstronomyPackets;
 import net.fabricmc.api.ModInitializer;
@@ -19,6 +20,7 @@ public class AstronomyMod implements ModInitializer {
     public void onInitialize() {
         LOGGER.info("Astronomy Mod Initializing...");
 
+        ModComponents.registerComponents();
         ModItems.registerModItems();
         AstronomyCommands.register();
 

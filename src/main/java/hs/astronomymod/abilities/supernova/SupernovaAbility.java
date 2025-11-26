@@ -19,30 +19,31 @@ public class SupernovaAbility implements Ability {
 
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-
-        // Passive buffs
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 40, 0, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, 400, 0, false, false, false));
-
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 0, false, false, true));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, 40, 0, false, false, true));
-
-        // Burning aura
-        if (player.age % 20 == 0) {
-            List<LivingEntity> nearby = player.getEntityWorld().getEntitiesByClass(
-                    LivingEntity.class,
-                    player.getBoundingBox().expand(3),
-                    e -> e != player
-            );
-
-            nearby.forEach(e -> e.setOnFireFor(3));
+        // Fetch the equipped astronomy item stack
+        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+        
+        // Passive Effect 1: Fire Immunity (requires exactly 1 shard or more)
+        if (shards >= 1) {
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.FIRE_RESISTANCE, 40, 0, false, false, false));
         }
-
-        // Flame particles
+        
+        // Passive Effect 2: Burning Aura (requires exactly 2 shards or more)
+        if (shards >= 2) {
+            if (player.age % 20 == 0) {
+                List<LivingEntity> nearby = player.getEntityWorld().getEntitiesByClass(
+                        LivingEntity.class,
+                        player.getBoundingBox().expand(3),
+                        e -> e != player
+                );
+                nearby.forEach(e -> e.setOnFireFor(3));
+            }
+        }
+        
+        // Flame particles (intensity scales with shards)
         if (player.getEntityWorld() instanceof ServerWorld serverWorld && player.age % 5 == 0) {
             Vec3d pos = player.getEntityPos();
-
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < shards; i++) {
                 serverWorld.spawnParticles(
                         ParticleTypes.FLAME,
                         pos.x + (Math.random() - 0.5) * 0.8,
@@ -56,7 +57,7 @@ public class SupernovaAbility implements Ability {
 
     @Override
     public void applyActive(ServerPlayerEntity player) {
-
+        // Active ability requires 3 shards
         ServerWorld serverWorld = (ServerWorld) player.getEntityWorld();
         Vec3d playerPos = player.getEntityPos();
 
@@ -119,7 +120,6 @@ public class SupernovaAbility implements Ability {
 
         // Expanding fire rings
         for (int ring = 0; ring < 5; ring++) {
-
             double radius = 2 + ring * 2.5;
 
             for (int i = 0; i < 40; i++) {

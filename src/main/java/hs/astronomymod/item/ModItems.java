@@ -30,6 +30,10 @@ public class ModItems {
     public static final Item PULSAR_ITEM =
             registerItem("pulsar", PulsarItem::new, new Item.Settings().maxCount(1));
 
+    // Astronomy Shard
+    public static final Item ASTRONOMY_SHARD =
+            registerItem("astronomy_shard", AstronomyShard::new, new Item.Settings().maxCount(64));
+
 
     /**
      * Generic register helper identical to ElementMod

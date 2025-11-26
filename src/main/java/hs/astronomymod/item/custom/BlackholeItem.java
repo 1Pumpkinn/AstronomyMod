@@ -12,7 +12,7 @@ public class BlackholeItem extends AstronomyItem {
     }
 
     @Override
-    protected void addCustomTooltip(Consumer<Text> tooltip) {
+    protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
         tooltip.accept(Text.literal("§5Passive: Event Horizon"));
         tooltip.accept(Text.literal("  §7• Void Protection"));
         tooltip.accept(Text.literal("  §7• Massive Health Boost"));

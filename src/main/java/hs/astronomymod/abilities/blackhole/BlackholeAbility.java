@@ -16,28 +16,29 @@ import java.util.List;
 public class BlackholeAbility implements Ability {
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Passive: Event Horizon - absorption and void protection
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION, 40, 2, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 40, 1, false, false, false));
-
-        // Increased max health
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.HEALTH_BOOST, 40, 3, false, false, true));
-
-        // Void walker - slow falling and water breathing
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 40, 0, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.WATER_BREATHING, 40, 0, false, false, false));
-
-        // Slight gravity pull on nearby items
-        if (player.age % 10 == 0) {
-            List<net.minecraft.entity.ItemEntity> items = player.getEntityWorld().getEntitiesByClass(
-                    net.minecraft.entity.ItemEntity.class,
-                    player.getBoundingBox().expand(8),
-                    e -> true
-            );
-            items.forEach(item -> {
-                Vec3d direction = player.getEntityPos().subtract(item.getEntityPos()).normalize();
-                item.setVelocity(direction.multiply(0.3));
-            });
+        // Fetch the equipped astronomy item stack
+        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+        
+        // Passive Effect 1: Void Protection (requires exactly 1 shard or more)
+        if (shards >= 1) {
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 40, 0, false, false, false));
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.WATER_BREATHING, 40, 0, false, false, false));
+        }
+        
+        // Passive Effect 2: Item Magnetism (requires exactly 2 shards or more)
+        if (shards >= 2) {
+            if (player.age % 10 == 0) {
+                List<net.minecraft.entity.ItemEntity> items = player.getEntityWorld().getEntitiesByClass(
+                        net.minecraft.entity.ItemEntity.class,
+                        player.getBoundingBox().expand(8),
+                        e -> true
+                );
+                items.forEach(item -> {
+                    Vec3d direction = player.getEntityPos().subtract(item.getEntityPos()).normalize();
+                    item.setVelocity(direction.multiply(0.3));
+                });
+            }
         }
 
         // Dark void particles

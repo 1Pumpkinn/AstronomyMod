@@ -44,6 +44,9 @@ public class AstronomyCommands {
                                 .then(CommandManager.literal("all")
                                         .executes(AstronomyCommands::giveAllItems)
                                 )
+                                .then(CommandManager.literal("shards")
+                                        .executes(AstronomyCommands::giveShards)
+                                )
                         )
         );
     }
@@ -93,6 +96,17 @@ public class AstronomyCommands {
             player.giveItemStack(new ItemStack(ModItems.NEUTRON_STAR_ITEM));
             player.giveItemStack(new ItemStack(ModItems.PULSAR_ITEM));
             player.sendMessage(Text.literal("§6Given all astronomy items!"), false);
+            return 1;
+        }
+        return 0;
+    }
+
+    private static int giveShards(CommandContext<ServerCommandSource> context) {
+        ServerPlayerEntity player = context.getSource().getPlayer();
+        if (player != null) {
+            ItemStack shards = new ItemStack(ModItems.ASTRONOMY_SHARD, 16);
+            player.giveItemStack(shards);
+            player.sendMessage(Text.literal("§6Given 16 Astronomy Shards!"), false);
             return 1;
         }
         return 0;

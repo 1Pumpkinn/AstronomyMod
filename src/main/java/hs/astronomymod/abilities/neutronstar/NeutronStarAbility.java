@@ -2,10 +2,8 @@ package hs.astronomymod.abilities.neutronstar;
 
 import hs.astronomymod.abilities.Ability;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -18,33 +16,22 @@ import java.util.List;
 public class NeutronStarAbility implements Ability {
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Passive: Ultra-Dense Core - extreme resistance and strength
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 40, 2, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.STRENGTH, 40, 2, false, false, true));
-
-        // Immovable - knockback resistance
-        if (player.getEntityWorld() instanceof ServerWorld) {
-            player.setVelocity(player.getVelocity().multiply(0.8, 1.0, 0.8));
+        // Fetch the equipped astronomy item stack
+        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+        
+        // Passive Effect 1: Extreme Resistance (requires exactly 1 shard or more)
+        if (shards >= 1) {
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 40, 2, false, false, false));
         }
-
-        // Dense armor - damage reduction aura
-        List<LivingEntity> nearbyEnemies = player.getEntityWorld().getEntitiesByClass(
-                LivingEntity.class,
-                player.getBoundingBox().expand(4),
-                e -> {
-                    if (e == player) return false; // ignore self
-                    if (e instanceof MobEntity mob) {
-                        return mob.getTarget() == player; // true if mob is actively targeting player
-                    }
-                    return false; // ignore non-mobs
-                }
-        );
-        if (!nearbyEnemies.isEmpty()) {
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.ABSORPTION, 40, 1, false, false, true));
+        
+        // Passive Effect 2: Knockback Immunity (requires exactly 2 shards or more)
+        if (shards >= 2) {
+            // Immovable - knockback resistance
+            if (player.getEntityWorld() instanceof ServerWorld) {
+                player.setVelocity(player.getVelocity().multiply(0.8, 1.0, 0.8));
+            }
         }
-
-        // Haste for mining
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 40, 1, false, false, true));
 
         // Metallic shimmer particles
         if (player.getEntityWorld() instanceof ServerWorld serverWorld && player.age % 15 == 0) {

@@ -3,7 +3,6 @@ package hs.astronomymod.client;
 import hs.astronomymod.item.AstronomyItem;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 
 import java.util.HashMap;
@@ -63,8 +62,14 @@ public class AstronomySlotComponent {
     // --- Trigger active ability (via keybind) ---
     public void activateAbility(ServerPlayerEntity player) {
         if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem && cooldown <= 0) {
-            astronomyItem.applyActiveAbility(player);
-            cooldown = 600; // 30s cooldown (600 ticks = 30 seconds)
+            int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+
+            if (shards >= 3) {
+                astronomyItem.applyActiveAbility(player);
+                cooldown = 600; // 30s cooldown (600 ticks = 30 seconds)
+            } else {
+                player.sendMessage(net.minecraft.text.Text.literal("§cNeed 3 shards to use active ability!"), true);
+            }
         }
     }
 
@@ -95,8 +100,4 @@ public class AstronomySlotComponent {
     public void setCooldown(int cooldown) {
         this.cooldown = cooldown;
     }
-
-    // Note: NBT serialization removed - we're using in-memory storage only
-    // The component is synced via network packets instead
-    // This avoids complex registry manager issues
 }

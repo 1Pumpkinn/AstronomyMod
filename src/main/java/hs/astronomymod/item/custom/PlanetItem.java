@@ -13,7 +13,7 @@ public class PlanetItem extends AstronomyItem {
     }
 
     @Override
-    protected void addCustomTooltip(Consumer<Text> tooltip) {
+    protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
         tooltip.accept(Text.literal("§bPassive: Orbital Stability"));
         tooltip.accept(Text.literal("  §7• Slow Falling & Step Assist"));
         tooltip.accept(Text.literal("  §7• Periodic Regeneration"));

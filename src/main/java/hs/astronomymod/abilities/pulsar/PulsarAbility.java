@@ -17,28 +17,29 @@ import java.util.List;
 public class PulsarAbility implements Ability {
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Passive: Rhythmic Pulses - periodic speed, haste, and energy effects
-
-        // Calculate pulse cycle (0-100 based on age)
+        // Fetch the equipped astronomy item stack
+        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+        
+        // Calculate pulse cycle (0-100 based on age) - used for both effects and particles
         int pulsePhase = player.age % 100;
-
-        // Enhanced effects during pulse (every 5 seconds)
-        if (pulsePhase < 20) {
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 1, false, false, true));
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 40, 1, false, false, true));
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40, 1, false, false, true));
-        } else {
-            // Base effects between pulses
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 0, false, false, true));
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 40, 0, false, false, true));
+        
+        // Passive Effect 1: Periodic Speed & Haste (requires exactly 1 shard or more)
+        if (shards >= 1) {
+            // Enhanced effects during pulse (every 5 seconds)
+            if (pulsePhase < 20) {
+                player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 1, false, false, true));
+                player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 40, 1, false, false, true));
+            } else {
+                // Base effects between pulses
+                player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 40, 0, false, false, true));
+                player.addStatusEffect(new StatusEffectInstance(StatusEffects.HASTE, 40, 0, false, false, true));
+            }
         }
-
-        // Constant night vision (electromagnetic sight)
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, 400, 0, false, false, false));
-
-        // Energy regeneration - periodic saturation
-        if (player.age % 200 == 0) {
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SATURATION, 40, 0, false, false, true));
+        
+        // Passive Effect 2: Electromagnetic Sight (requires exactly 2 shards or more)
+        if (shards >= 2) {
+            player.addStatusEffect(new StatusEffectInstance(StatusEffects.NIGHT_VISION, 400, 0, false, false, false));
         }
 
         // Electromagnetic pulse particles

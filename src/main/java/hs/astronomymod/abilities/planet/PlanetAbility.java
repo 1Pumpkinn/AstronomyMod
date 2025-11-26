@@ -15,20 +15,27 @@ import java.util.List;
 public class PlanetAbility implements Ability {
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Passive: Orbital stability - slow falling and step assist
-        player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.SLOW_FALLING, 40, 0, false, false, false
-        ));
-
-        // Step assist (like a horse)
-        player.getAttributeInstance(EntityAttributes.STEP_HEIGHT)
-                .setBaseValue(1.0);
-
-        // Gravitational healing - periodic regeneration
-        if (player.age % 80 == 0) {
+        // Fetch the equipped astronomy item stack
+        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+        
+        // Passive Effect 1: Slow Falling & Step Assist (requires exactly 1 shard or more)
+        if (shards >= 1) {
             player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.REGENERATION, 80, 1, false, false, true
+                    StatusEffects.SLOW_FALLING, 40, 0, false, false, false
             ));
+            // Step assist (like a horse)
+            player.getAttributeInstance(EntityAttributes.STEP_HEIGHT)
+                    .setBaseValue(1.0);
+        }
+        
+        // Passive Effect 2: Periodic Regeneration (requires exactly 2 shards or more)
+        if (shards >= 2) {
+            if (player.age % 80 == 0) {
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.REGENERATION, 80, 1, false, false, true
+                ));
+            }
         }
 
         // Atmospheric particles

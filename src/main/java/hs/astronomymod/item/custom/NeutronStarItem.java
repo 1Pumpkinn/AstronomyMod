@@ -12,7 +12,7 @@ public class NeutronStarItem extends AstronomyItem {
     }
 
     @Override
-    protected void addCustomTooltip(Consumer<Text> tooltip) {
+    protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
         tooltip.accept(Text.literal("§7Passive: Ultra-Dense Core"));
         tooltip.accept(Text.literal("  §7• Extreme Resistance"));
         tooltip.accept(Text.literal("  §7• Massive Strength"));

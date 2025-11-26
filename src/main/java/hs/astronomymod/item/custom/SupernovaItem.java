@@ -12,14 +12,35 @@ public class SupernovaItem extends AstronomyItem {
     }
 
     @Override
-    protected void addCustomTooltip(Consumer<Text> tooltip) {
-        tooltip.accept(Text.literal("§cPassive: Stellar Heat"));
-        tooltip.accept(Text.literal("  §7• Fire Immunity"));
-        tooltip.accept(Text.literal("  §7• Burning Aura"));
-        tooltip.accept(Text.literal("  §7• Night Vision"));
-        tooltip.accept(Text.literal("§6Active: Supernova Explosion"));
-        tooltip.accept(Text.literal("  §7• Massive Damage & Knockback"));
-        tooltip.accept(Text.literal("§e+ Speed & Strength Boost"));
-        tooltip.accept(Text.literal("§e+ Resistance"));
+    protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
+        int shards = stack.getOrDefault(
+                hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS,
+                0
+        );
+
+        if (shards >= 1) {
+            tooltip.accept(Text.literal("§c1 Shard: Stellar Heat"));
+            tooltip.accept(Text.literal("  §7• Fire Immunity"));
+            tooltip.accept(Text.literal("  §7• Night Vision"));
+        } else {
+            tooltip.accept(Text.literal("§81 Shard: ???"));
+        }
+
+        if (shards >= 2) {
+            tooltip.accept(Text.literal("§c2 Shards: Solar Flare"));
+            tooltip.accept(Text.literal("  §7• Burning Aura"));
+            tooltip.accept(Text.literal("  §7• Speed & Strength"));
+        } else {
+            tooltip.accept(Text.literal("§82 Shards: ???"));
+        }
+
+        if (shards >= 3) {
+            tooltip.accept(Text.literal("§63 Shards: Supernova Explosion"));
+            tooltip.accept(Text.literal("§c1 Shard: Stellar Heat"));
+            tooltip.accept(Text.literal("  §7• Fire Immunity"));
+            tooltip.accept(Text.literal("  §7• Night Vision"));
+        } else {
+            tooltip.accept(Text.literal("§81 Shard: ???"));
+        }
     }
 }

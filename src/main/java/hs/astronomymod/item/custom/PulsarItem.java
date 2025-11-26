@@ -12,7 +12,7 @@ public class PulsarItem extends AstronomyItem {
     }
 
     @Override
-    protected void addCustomTooltip(Consumer<Text> tooltip) {
+    protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
         tooltip.accept(Text.literal("§3Passive: Rhythmic Pulses"));
         tooltip.accept(Text.literal("  §7• Periodic Speed & Haste"));
         tooltip.accept(Text.literal("  §7• Enhanced Jump"));

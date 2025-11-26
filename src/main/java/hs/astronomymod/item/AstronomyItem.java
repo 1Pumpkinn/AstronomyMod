@@ -50,8 +50,8 @@ public abstract class AstronomyItem extends Item {
     ) {
         textConsumer.accept(Text.literal("§6Astronomy Item"));
         textConsumer.accept(Text.literal("§7Place in Astronomy Slot for abilities"));
-        addCustomTooltip(textConsumer);
+        addCustomTooltip(textConsumer, stack);
     }
 
-    protected abstract void addCustomTooltip(Consumer<Text> textConsumer);
+    protected abstract void addCustomTooltip(Consumer<Text> textConsumer, ItemStack stack);
 }
