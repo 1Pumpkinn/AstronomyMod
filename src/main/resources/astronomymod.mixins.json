@@ -1,12 +1,11 @@
 {
   "required": true,
   "package": "hs.astronomymod.mixin",
-  "compatibilityLevel": "JAVA_17",
-  "mixins": [
-    "InventorySlotMixin"
-  ],
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [],
   "client": [
-    "InventorySlotMixin"
+    "InventorySlotMixin",
+    "MouseScrollMixin"
   ],
   "injectors": {
     "defaultRequire": 1

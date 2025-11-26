@@ -4,6 +4,7 @@ import hs.astronomymod.AstronomyMod;
 import hs.astronomymod.client.AstronomySlotComponent;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.item.ItemStack;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.codec.PacketCodecs;
@@ -19,18 +20,33 @@ public class AstronomyPackets {
     public static final CustomPayload.Id<SyncSlotPayload> SYNC_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "sync_slot"));
 
-    public static void registerC2SPackets() {
-        // Register the payload type for C2S
-        PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
+    public static final CustomPayload.Id<UpdateSlotPayload> UPDATE_SLOT_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "update_slot"));
 
-        // Register the receiver
+    public static void registerC2SPackets() {
+        // Register activate ability packet
+        PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ACTIVATE_ABILITY_ID, (payload, context) -> {
             context.server().execute(() -> {
                 var player = context.player();
-
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component != null) {
                     component.activateAbility(player);
+                }
+            });
+        });
+
+        // Register update slot packet (C2S)
+        PayloadTypeRegistry.playC2S().register(UPDATE_SLOT_ID, UpdateSlotPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(UPDATE_SLOT_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component != null) {
+                    component.setAstronomyStack(payload.stack());
+                    AstronomyMod.LOGGER.info("Updated astronomy slot for player: " +
+                            player.getName().getString() + " with item: " +
+                            (payload.stack().isEmpty() ? "EMPTY" : payload.stack().getName().getString()));
                 }
             });
         });
@@ -60,6 +76,19 @@ public class AstronomyPackets {
         @Override
         public Id<? extends CustomPayload> getId() {
             return SYNC_SLOT_ID;
+        }
+    }
+
+    public record UpdateSlotPayload(ItemStack stack) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, UpdateSlotPayload> CODEC =
+                PacketCodec.tuple(
+                        ItemStack.PACKET_CODEC, UpdateSlotPayload::stack,
+                        UpdateSlotPayload::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return UPDATE_SLOT_ID;
         }
     }
 }
