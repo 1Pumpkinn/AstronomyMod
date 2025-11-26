@@ -60,6 +60,8 @@ public class AstronomyPackets {
                     AstronomyMod.LOGGER.info("Updated astronomy slot for player: " +
                             player.getName().getString() + " with item: " +
                             (stack.isEmpty() ? "EMPTY" : stack.getName().getString()));
+                    // Always sync back to client to confirm stack
+                    ServerPlayNetworking.send(player, new SyncSlotPayload(0));
                 }
             });
         });
