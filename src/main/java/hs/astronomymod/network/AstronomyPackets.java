@@ -10,6 +10,7 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.network.RegistryByteBuf;
 import net.minecraft.network.codec.PacketCodec;
 import net.minecraft.network.packet.CustomPayload;
+import net.minecraft.screen.PlayerScreenHandler;
 import net.minecraft.util.Identifier;
 
 public class AstronomyPackets {
@@ -19,6 +20,15 @@ public class AstronomyPackets {
 
     public static final CustomPayload.Id<SyncSlotPayload> SYNC_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "sync_slot"));
+
+    public static final CustomPayload.Id<PlaceInSlotPayload> PLACE_IN_SLOT_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "place_in_slot"));
+
+    public static final CustomPayload.Id<TakeFromSlotPayload> TAKE_FROM_SLOT_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "take_from_slot"));
+
+    public static final CustomPayload.Id<SwapSlotPayload> SWAP_SLOT_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "swap_slot"));
 
     public static final CustomPayload.Id<UpdateSlotPayload> UPDATE_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "update_slot"));
@@ -37,35 +47,210 @@ public class AstronomyPackets {
             });
         });
 
-        // Register update slot packet (C2S)
+        // Register PLACE in slot
+        PayloadTypeRegistry.playC2S().register(PLACE_IN_SLOT_ID, PlaceInSlotPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(PLACE_IN_SLOT_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack requestedStack = payload.stack();
+                ItemStack currentSlot = component.getAstronomyStack();
+
+                // Validate
+                if (!currentSlot.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Slot not empty, rejecting place");
+                    return;
+                }
+                if (requestedStack.isEmpty() || !(requestedStack.getItem() instanceof AstronomyItem)) {
+                    AstronomyMod.LOGGER.warn("Invalid item for astronomy slot");
+                    return;
+                }
+
+                // Check cursor stack first (player is holding item)
+                if (player.currentScreenHandler instanceof PlayerScreenHandler screenHandler) {
+                    ItemStack cursorStack = screenHandler.getCursorStack();
+
+                    if (!cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, requestedStack)) {
+                        // Take from cursor
+                        ItemStack toPlace = cursorStack.copy();
+                        toPlace.setCount(1);
+
+                        cursorStack.decrement(1);
+                        component.setAstronomyStack(toPlace);
+
+                        // Sync to client
+                        ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
+                        AstronomyMod.LOGGER.info("Placed {} in astronomy slot from cursor", toPlace.getName().getString());
+                        return;
+                    }
+                }
+
+                // Fallback: find in inventory
+                boolean found = false;
+                for (int i = 0; i < player.getInventory().size(); i++) {
+                    ItemStack invStack = player.getInventory().getStack(i);
+                    if (ItemStack.areItemsAndComponentsEqual(invStack, requestedStack)) {
+                        invStack.decrement(1);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    AstronomyMod.LOGGER.warn("Item not found in inventory or cursor");
+                    return;
+                }
+
+                // Place in slot
+                ItemStack toPlace = requestedStack.copy();
+                toPlace.setCount(1);
+                component.setAstronomyStack(toPlace);
+
+                // Sync to client
+                ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
+                AstronomyMod.LOGGER.info("Placed {} in astronomy slot", toPlace.getName().getString());
+            });
+        });
+
+        // Register TAKE from slot
+        PayloadTypeRegistry.playC2S().register(TAKE_FROM_SLOT_ID, TakeFromSlotPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(TAKE_FROM_SLOT_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack currentSlot = component.getAstronomyStack();
+                if (currentSlot.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Slot is empty, nothing to take");
+                    return;
+                }
+
+                // Put on cursor if player has screen handler open
+                if (player.currentScreenHandler instanceof PlayerScreenHandler screenHandler) {
+                    ItemStack cursorStack = screenHandler.getCursorStack();
+
+                    if (cursorStack.isEmpty()) {
+                        // Put item on cursor
+                        screenHandler.setCursorStack(currentSlot.copy());
+                        component.setAstronomyStack(ItemStack.EMPTY);
+
+                        // Sync to client
+                        ServerPlayNetworking.send(player, new SyncSlotPayload(ItemStack.EMPTY));
+                        AstronomyMod.LOGGER.info("Took {} from astronomy slot to cursor", currentSlot.getName().getString());
+                        return;
+                    }
+                }
+
+                // Fallback: give to inventory
+                if (!player.giveItemStack(currentSlot.copy())) {
+                    player.dropItem(currentSlot.copy(), false);
+                }
+
+                // Clear slot
+                component.setAstronomyStack(ItemStack.EMPTY);
+
+                // Sync to client
+                ServerPlayNetworking.send(player, new SyncSlotPayload(ItemStack.EMPTY));
+                AstronomyMod.LOGGER.info("Took {} from astronomy slot", currentSlot.getName().getString());
+            });
+        });
+
+        // Register SWAP slot
+        PayloadTypeRegistry.playC2S().register(SWAP_SLOT_ID, SwapSlotPayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SWAP_SLOT_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack requestedStack = payload.stack();
+                ItemStack currentSlot = component.getAstronomyStack();
+
+                if (currentSlot.isEmpty() || requestedStack.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Cannot swap with empty slot");
+                    return;
+                }
+                if (!(requestedStack.getItem() instanceof AstronomyItem)) {
+                    AstronomyMod.LOGGER.warn("Cannot place non-astronomy item");
+                    return;
+                }
+
+                // Check cursor stack first
+                if (player.currentScreenHandler instanceof PlayerScreenHandler screenHandler) {
+                    ItemStack cursorStack = screenHandler.getCursorStack();
+
+                    if (!cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, requestedStack)) {
+                        // Take from cursor, put old on cursor
+                        ItemStack toPlace = cursorStack.copy();
+                        toPlace.setCount(1);
+
+                        cursorStack.decrement(1);
+
+                        // Put old item on cursor or back to inventory
+                        if (cursorStack.isEmpty()) {
+                            screenHandler.setCursorStack(currentSlot.copy());
+                        } else {
+                            // Cursor still has items, give old item to inventory
+                            if (!player.giveItemStack(currentSlot.copy())) {
+                                player.dropItem(currentSlot.copy(), false);
+                            }
+                        }
+
+                        component.setAstronomyStack(toPlace);
+
+                        // Sync to client
+                        ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
+                        AstronomyMod.LOGGER.info("Swapped astronomy slot items from cursor");
+                        return;
+                    }
+                }
+
+                // Fallback: find in inventory
+                boolean found = false;
+                for (int i = 0; i < player.getInventory().size(); i++) {
+                    ItemStack invStack = player.getInventory().getStack(i);
+                    if (ItemStack.areItemsAndComponentsEqual(invStack, requestedStack)) {
+                        invStack.decrement(1);
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) {
+                    AstronomyMod.LOGGER.warn("Item not found in inventory");
+                    return;
+                }
+
+                // Give old item back
+                if (!player.giveItemStack(currentSlot.copy())) {
+                    player.dropItem(currentSlot.copy(), false);
+                }
+
+                // Place new item
+                ItemStack toPlace = requestedStack.copy();
+                toPlace.setCount(1);
+                component.setAstronomyStack(toPlace);
+
+                // Sync to client
+                ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
+                AstronomyMod.LOGGER.info("Swapped astronomy slot items");
+            });
+        });
+
+        // Keep old UPDATE_SLOT for backwards compatibility / commands
         PayloadTypeRegistry.playC2S().register(UPDATE_SLOT_ID, UpdateSlotPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(UPDATE_SLOT_ID, (payload, context) -> {
             context.server().execute(() -> {
                 var player = context.player();
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
-                if (component != null) {
-                    ItemStack stack = payload.stack();
+                if (component == null) return;
 
-                    // Validate that the item is an AstronomyItem or empty
-                    if (!stack.isEmpty() && !(stack.getItem() instanceof AstronomyItem)) {
-                        AstronomyMod.LOGGER.warn("Player {} attempted to place non-astronomy item in slot: {}",
-                                player.getName().getString(), stack.getName().getString());
-                        // Reject and sync back current state
-                        ItemStack currentStack = component.getAstronomyStack();
-                        ServerPlayNetworking.send(player, new SyncSlotPayload(currentStack));
-                        return;
-                    }
-
-                    // Update server-side component
-                    component.setAstronomyStack(stack);
-
-                    AstronomyMod.LOGGER.info("Updated astronomy slot for player: {} with item: {}",
-                            player.getName().getString(),
-                            stack.isEmpty() ? "EMPTY" : stack.getName().getString());
-
-                    // Sync back to client to confirm
-                    ServerPlayNetworking.send(player, new SyncSlotPayload(stack));
-                }
+                ItemStack newStack = payload.stack();
+                component.setAstronomyStack(newStack);
+                ServerPlayNetworking.send(player, new SyncSlotPayload(newStack));
             });
         });
     }
@@ -109,6 +294,42 @@ public class AstronomyPackets {
         @Override
         public Id<? extends CustomPayload> getId() {
             return SYNC_SLOT_ID;
+        }
+    }
+
+    public record PlaceInSlotPayload(ItemStack stack) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, PlaceInSlotPayload> CODEC =
+                PacketCodec.tuple(
+                        ItemStack.OPTIONAL_PACKET_CODEC, PlaceInSlotPayload::stack,
+                        PlaceInSlotPayload::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return PLACE_IN_SLOT_ID;
+        }
+    }
+
+    public record TakeFromSlotPayload() implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, TakeFromSlotPayload> CODEC =
+                PacketCodec.unit(new TakeFromSlotPayload());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return TAKE_FROM_SLOT_ID;
+        }
+    }
+
+    public record SwapSlotPayload(ItemStack stack) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, SwapSlotPayload> CODEC =
+                PacketCodec.tuple(
+                        ItemStack.OPTIONAL_PACKET_CODEC, SwapSlotPayload::stack,
+                        SwapSlotPayload::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return SWAP_SLOT_ID;
         }
     }
 

@@ -12,7 +12,6 @@ import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
@@ -103,40 +102,35 @@ public abstract class InventorySlotMixin extends HandledScreen<PlayerScreenHandl
             return true;
         }
 
-        // Handle the swap
+        // Handle the swap - but DON'T modify cursor or slot yet
+        // Just send the request to server
         if (cursorStack.isEmpty() && !slotStack.isEmpty()) {
             // Taking item from slot
-            this.handler.setCursorStack(slotStack.copy());
-            astronomy$updateSlot(ItemStack.EMPTY);
+            if (ClientPlayNetworking.canSend(AstronomyPackets.TAKE_FROM_SLOT_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.TakeFromSlotPayload());
+            }
         } else if (!cursorStack.isEmpty() && slotStack.isEmpty()) {
             // Placing item in slot
             ItemStack toPlace = cursorStack.copy();
-            toPlace.setCount(1); // Only allow 1 item
-
-            this.handler.setCursorStack(ItemStack.EMPTY);
-            astronomy$updateSlot(toPlace);
-        } else if (!cursorStack.isEmpty() && !slotStack.isEmpty()) {
-            // Swapping items
-            ItemStack temp = slotStack.copy();
-            ItemStack toPlace = cursorStack.copy();
             toPlace.setCount(1);
 
-            this.handler.setCursorStack(temp);
-            astronomy$updateSlot(toPlace);
+            if (ClientPlayNetworking.canSend(AstronomyPackets.PLACE_IN_SLOT_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.PlaceInSlotPayload(toPlace));
+            }
+        } else if (!cursorStack.isEmpty() && !slotStack.isEmpty()) {
+            // Swapping items
+            if (cursorStack.getCount() > 1) {
+                // Can't easily swap with stack, reject
+                return true;
+            }
+
+            ItemStack toPlace = cursorStack.copy();
+            if (ClientPlayNetworking.canSend(AstronomyPackets.SWAP_SLOT_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.SwapSlotPayload(toPlace));
+            }
         }
 
         return true;
-    }
-
-    @Unique
-    private void astronomy$updateSlot(ItemStack newStack) {
-        // Update client immediately for responsiveness
-        AstronomySlotComponent.getClient().setAstronomyStack(newStack);
-
-        // Send to server for authoritative update
-        if (ClientPlayNetworking.canSend(AstronomyPackets.UPDATE_SLOT_ID)) {
-            ClientPlayNetworking.send(new AstronomyPackets.UpdateSlotPayload(newStack));
-        }
     }
 
     @Unique
