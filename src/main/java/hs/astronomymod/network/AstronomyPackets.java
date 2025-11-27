@@ -33,6 +33,16 @@ public class AstronomyPackets {
     public static final CustomPayload.Id<UpdateSlotPayload> UPDATE_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "update_slot"));
 
+    // Creative mode packet IDs
+    public static final CustomPayload.Id<PlaceInSlotCreativePayload> PLACE_IN_SLOT_CREATIVE_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "place_in_slot_creative"));
+
+    public static final CustomPayload.Id<TakeFromSlotCreativePayload> TAKE_FROM_SLOT_CREATIVE_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "take_from_slot_creative"));
+
+    public static final CustomPayload.Id<SwapSlotCreativePayload> SWAP_SLOT_CREATIVE_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "swap_slot_creative"));
+
     public static void registerC2SPackets() {
         // Register activate ability packet
         PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
@@ -47,7 +57,7 @@ public class AstronomyPackets {
             });
         });
 
-        // Register PLACE in slot
+        // Register PLACE in slot (survival mode)
         PayloadTypeRegistry.playC2S().register(PLACE_IN_SLOT_ID, PlaceInSlotPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(PLACE_IN_SLOT_ID, (payload, context) -> {
             context.server().execute(() -> {
@@ -87,7 +97,7 @@ public class AstronomyPackets {
             });
         });
 
-        // Register TAKE from slot
+        // Register TAKE from slot (survival mode)
         PayloadTypeRegistry.playC2S().register(TAKE_FROM_SLOT_ID, TakeFromSlotPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(TAKE_FROM_SLOT_ID, (payload, context) -> {
             context.server().execute(() -> {
@@ -131,7 +141,7 @@ public class AstronomyPackets {
             });
         });
 
-        // Register SWAP slot
+        // Register SWAP slot (survival mode)
         PayloadTypeRegistry.playC2S().register(SWAP_SLOT_ID, SwapSlotPayload.CODEC);
         ServerPlayNetworking.registerGlobalReceiver(SWAP_SLOT_ID, (payload, context) -> {
             context.server().execute(() -> {
@@ -189,6 +199,92 @@ public class AstronomyPackets {
                 ServerPlayNetworking.send(player, new SyncSlotPayload(newStack));
             });
         });
+
+        // ===== CREATIVE MODE PACKETS =====
+
+        // Register PLACE in slot (creative mode)
+        PayloadTypeRegistry.playC2S().register(PLACE_IN_SLOT_CREATIVE_ID, PlaceInSlotCreativePayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(PLACE_IN_SLOT_CREATIVE_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack currentSlot = component.getAstronomyStack();
+
+                // Validate slot is empty
+                if (!currentSlot.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Creative: Slot not empty, rejecting place");
+                    return;
+                }
+
+                // In creative mode, we just directly place the item
+                ItemStack toPlace = payload.stack();
+                if (toPlace.isEmpty() || !(toPlace.getItem() instanceof AstronomyItem)) {
+                    AstronomyMod.LOGGER.warn("Creative: Invalid item for astronomy slot");
+                    return;
+                }
+
+                // Place single item in slot - don't give anything back to player
+                ItemStack singleItem = toPlace.copy();
+                singleItem.setCount(1);
+                component.setAstronomyStack(singleItem);
+                ServerPlayNetworking.send(player, new SyncSlotPayload(singleItem));
+                AstronomyMod.LOGGER.info("Creative: Placed {} in astronomy slot", toPlace.getName().getString());
+            });
+        });
+
+        // Register TAKE from slot (creative mode)
+        PayloadTypeRegistry.playC2S().register(TAKE_FROM_SLOT_CREATIVE_ID, TakeFromSlotCreativePayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(TAKE_FROM_SLOT_CREATIVE_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack currentSlot = component.getAstronomyStack();
+                if (currentSlot.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Creative: Slot is empty, nothing to take");
+                    return;
+                }
+
+                // In creative mode, just clear the slot - don't give item back
+                // (Creative mode players can get items from the creative menu)
+                component.setAstronomyStack(ItemStack.EMPTY);
+                ServerPlayNetworking.send(player, new SyncSlotPayload(ItemStack.EMPTY));
+                AstronomyMod.LOGGER.info("Creative: Removed {} from astronomy slot", currentSlot.getName().getString());
+            });
+        });
+
+        // Register SWAP slot (creative mode)
+        PayloadTypeRegistry.playC2S().register(SWAP_SLOT_CREATIVE_ID, SwapSlotCreativePayload.CODEC);
+        ServerPlayNetworking.registerGlobalReceiver(SWAP_SLOT_CREATIVE_ID, (payload, context) -> {
+            context.server().execute(() -> {
+                var player = context.player();
+                AstronomySlotComponent component = AstronomySlotComponent.get(player);
+                if (component == null) return;
+
+                ItemStack currentSlot = component.getAstronomyStack();
+                if (currentSlot.isEmpty()) {
+                    AstronomyMod.LOGGER.warn("Creative: Cannot swap with empty slot");
+                    return;
+                }
+
+                ItemStack toPlace = payload.stack();
+                if (toPlace.isEmpty() || !(toPlace.getItem() instanceof AstronomyItem)) {
+                    AstronomyMod.LOGGER.warn("Creative: Invalid item for swap");
+                    return;
+                }
+
+                // In creative mode: just replace the item, don't give old one back
+                // (Creative players can get items from creative menu)
+                ItemStack singleItem = toPlace.copy();
+                singleItem.setCount(1);
+                component.setAstronomyStack(singleItem);
+                ServerPlayNetworking.send(player, new SyncSlotPayload(singleItem));
+                AstronomyMod.LOGGER.info("Creative: Swapped astronomy slot items");
+            });
+        });
     }
 
     public static void registerS2CPackets() {
@@ -209,7 +305,8 @@ public class AstronomyPackets {
         });
     }
 
-    // Payload Records
+    // ===== PAYLOAD RECORDS =====
+
     public record ActivateAbilityPayload() implements CustomPayload {
         public static final PacketCodec<RegistryByteBuf, ActivateAbilityPayload> CODEC =
                 PacketCodec.unit(new ActivateAbilityPayload());
@@ -279,6 +376,44 @@ public class AstronomyPackets {
         @Override
         public Id<? extends CustomPayload> getId() {
             return UPDATE_SLOT_ID;
+        }
+    }
+
+    // ===== CREATIVE MODE PAYLOADS =====
+
+    public record PlaceInSlotCreativePayload(ItemStack stack) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, PlaceInSlotCreativePayload> CODEC =
+                PacketCodec.tuple(
+                        ItemStack.OPTIONAL_PACKET_CODEC, PlaceInSlotCreativePayload::stack,
+                        PlaceInSlotCreativePayload::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return PLACE_IN_SLOT_CREATIVE_ID;
+        }
+    }
+
+    public record TakeFromSlotCreativePayload() implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, TakeFromSlotCreativePayload> CODEC =
+                PacketCodec.unit(new TakeFromSlotCreativePayload());
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return TAKE_FROM_SLOT_CREATIVE_ID;
+        }
+    }
+
+    public record SwapSlotCreativePayload(ItemStack stack) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, SwapSlotCreativePayload> CODEC =
+                PacketCodec.tuple(
+                        ItemStack.OPTIONAL_PACKET_CODEC, SwapSlotCreativePayload::stack,
+                        SwapSlotCreativePayload::new
+                );
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return SWAP_SLOT_CREATIVE_ID;
         }
     }
 }

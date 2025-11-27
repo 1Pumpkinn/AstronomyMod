@@ -129,29 +129,31 @@ public abstract class CreativeInventorySlotMixin {
             return true;
         }
 
-        // Take item from slot
+        // Take item from slot (creative: just clears the slot, doesn't give item back)
         if (cursorStack.isEmpty() && !slotStack.isEmpty()) {
-            if (ClientPlayNetworking.canSend(AstronomyPackets.TAKE_FROM_SLOT_ID)) {
-                ClientPlayNetworking.send(new AstronomyPackets.TakeFromSlotPayload());
+            if (ClientPlayNetworking.canSend(AstronomyPackets.TAKE_FROM_SLOT_CREATIVE_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.TakeFromSlotCreativePayload());
             }
         }
-        // Place item in empty slot
+        // Place item in empty slot (creative: copies item from cursor, leaves cursor unchanged)
         else if (!cursorStack.isEmpty() && slotStack.isEmpty()) {
             ItemStack toPlace = cursorStack.copy();
             toPlace.setCount(1);
 
-            if (ClientPlayNetworking.canSend(AstronomyPackets.PLACE_IN_SLOT_ID)) {
-                ClientPlayNetworking.send(new AstronomyPackets.PlaceInSlotPayload(toPlace));
+            if (ClientPlayNetworking.canSend(AstronomyPackets.PLACE_IN_SLOT_CREATIVE_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.PlaceInSlotCreativePayload(toPlace));
             }
+            // Don't modify cursor - this is intentional for creative mode
         }
-        // Swap items
+        // Swap items (creative: replaces slot item, cursor stays the same)
         else if (!cursorStack.isEmpty() && !slotStack.isEmpty()) {
-            if (cursorStack.getCount() > 1) return true;
-
             ItemStack toPlace = cursorStack.copy();
-            if (ClientPlayNetworking.canSend(AstronomyPackets.SWAP_SLOT_ID)) {
-                ClientPlayNetworking.send(new AstronomyPackets.SwapSlotPayload(toPlace));
+            toPlace.setCount(1);
+
+            if (ClientPlayNetworking.canSend(AstronomyPackets.SWAP_SLOT_CREATIVE_ID)) {
+                ClientPlayNetworking.send(new AstronomyPackets.SwapSlotCreativePayload(toPlace));
             }
+            // Don't modify cursor - this is intentional for creative mode
         }
 
         return true;
