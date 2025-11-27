@@ -19,7 +19,9 @@ public class AstronomymodClient implements ClientModInitializer {
         AstronomyMod.LOGGER.info("Astronomy Mod Client Initializing...");
 
         ModKeybindings.registerKeybindings();
-        AstronomyPackets.registerS2CPackets();
+
+        // Register client-side packet handlers (but not the payload type - that's done in registerS2CPacketsServer)
+        AstronomyPackets.registerS2CPacketsClient();
 
         MinecraftClient client = MinecraftClient.getInstance();
 

@@ -287,10 +287,15 @@ public class AstronomyPackets {
         });
     }
 
-    public static void registerS2CPackets() {
+    // Server-side registration for S2C packets (encoding)
+    public static void registerS2CPacketsServer() {
         PayloadTypeRegistry.playS2C().register(SYNC_SLOT_ID, SyncSlotPayload.CODEC);
+    }
 
+    // Client-side registration for S2C packets (decoding + handling)
+    public static void registerS2CPacketsClient() {
         // Register client handler for sync packets
+        // Note: Payload type is already registered on server side
         ClientPlayNetworking.registerGlobalReceiver(SYNC_SLOT_ID, (payload, context) -> {
             context.client().execute(() -> {
                 AstronomySlotComponent clientComponent = AstronomySlotComponent.getClient();
