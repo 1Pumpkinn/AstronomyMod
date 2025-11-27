@@ -7,7 +7,8 @@
     "HandledScreenMixin",
     "InventorySlotMixin",
     "CreativeInventorySlotMixin",
-    "MouseScrollMixin"
+    "MouseScrollMixin",
+    "CreativeInventoryScreenAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

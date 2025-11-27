@@ -55,16 +55,11 @@ public class AstronomyPackets {
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component == null) return;
 
-                ItemStack requestedStack = payload.stack();
                 ItemStack currentSlot = component.getAstronomyStack();
 
-                // Validate
+                // Validate slot is empty
                 if (!currentSlot.isEmpty()) {
                     AstronomyMod.LOGGER.warn("Slot not empty, rejecting place");
-                    return;
-                }
-                if (requestedStack.isEmpty() || !(requestedStack.getItem() instanceof AstronomyItem)) {
-                    AstronomyMod.LOGGER.warn("Invalid item for astronomy slot");
                     return;
                 }
 
@@ -72,7 +67,7 @@ public class AstronomyPackets {
                 if (player.currentScreenHandler instanceof PlayerScreenHandler screenHandler) {
                     ItemStack cursorStack = screenHandler.getCursorStack();
 
-                    if (!cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, requestedStack)) {
+                    if (!cursorStack.isEmpty() && cursorStack.getItem() instanceof AstronomyItem) {
                         // Take from cursor
                         ItemStack toPlace = cursorStack.copy();
                         toPlace.setCount(1);
@@ -87,30 +82,8 @@ public class AstronomyPackets {
                     }
                 }
 
-                // Fallback: find in inventory
-                boolean found = false;
-                for (int i = 0; i < player.getInventory().size(); i++) {
-                    ItemStack invStack = player.getInventory().getStack(i);
-                    if (ItemStack.areItemsAndComponentsEqual(invStack, requestedStack)) {
-                        invStack.decrement(1);
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    AstronomyMod.LOGGER.warn("Item not found in inventory or cursor");
-                    return;
-                }
-
-                // Place in slot
-                ItemStack toPlace = requestedStack.copy();
-                toPlace.setCount(1);
-                component.setAstronomyStack(toPlace);
-
-                // Sync to client
-                ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
-                AstronomyMod.LOGGER.info("Placed {} in astronomy slot", toPlace.getName().getString());
+                // If we get here, cursor didn't work - this shouldn't happen in normal gameplay
+                AstronomyMod.LOGGER.warn("Place operation failed - no valid item on cursor");
             });
         });
 
@@ -166,77 +139,40 @@ public class AstronomyPackets {
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component == null) return;
 
-                ItemStack requestedStack = payload.stack();
                 ItemStack currentSlot = component.getAstronomyStack();
 
-                if (currentSlot.isEmpty() || requestedStack.isEmpty()) {
+                if (currentSlot.isEmpty()) {
                     AstronomyMod.LOGGER.warn("Cannot swap with empty slot");
                     return;
                 }
-                if (!(requestedStack.getItem() instanceof AstronomyItem)) {
-                    AstronomyMod.LOGGER.warn("Cannot place non-astronomy item");
-                    return;
-                }
 
-                // Check cursor stack first
+                // Check cursor stack
                 if (player.currentScreenHandler instanceof PlayerScreenHandler screenHandler) {
                     ItemStack cursorStack = screenHandler.getCursorStack();
 
-                    if (!cursorStack.isEmpty() && ItemStack.areItemsAndComponentsEqual(cursorStack, requestedStack)) {
-                        // Take from cursor, put old on cursor
-                        ItemStack toPlace = cursorStack.copy();
-                        toPlace.setCount(1);
-
-                        cursorStack.decrement(1);
-
-                        // Put old item on cursor or back to inventory
-                        if (cursorStack.isEmpty()) {
-                            screenHandler.setCursorStack(currentSlot.copy());
-                        } else {
-                            // Cursor still has items, give old item to inventory
-                            if (!player.giveItemStack(currentSlot.copy())) {
-                                player.dropItem(currentSlot.copy(), false);
-                            }
+                    if (!cursorStack.isEmpty() && cursorStack.getItem() instanceof AstronomyItem) {
+                        // Validate cursor has only 1 item for clean swap
+                        if (cursorStack.getCount() != 1) {
+                            AstronomyMod.LOGGER.warn("Cannot swap with stacked items");
+                            return;
                         }
 
+                        // Perform swap
+                        ItemStack toPlace = cursorStack.copy();
+                        ItemStack oldItem = currentSlot.copy();
+
+                        // Update cursor and slot
+                        screenHandler.setCursorStack(oldItem);
                         component.setAstronomyStack(toPlace);
 
                         // Sync to client
                         ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
-                        AstronomyMod.LOGGER.info("Swapped astronomy slot items from cursor");
+                        AstronomyMod.LOGGER.info("Swapped astronomy slot items");
                         return;
                     }
                 }
 
-                // Fallback: find in inventory
-                boolean found = false;
-                for (int i = 0; i < player.getInventory().size(); i++) {
-                    ItemStack invStack = player.getInventory().getStack(i);
-                    if (ItemStack.areItemsAndComponentsEqual(invStack, requestedStack)) {
-                        invStack.decrement(1);
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    AstronomyMod.LOGGER.warn("Item not found in inventory");
-                    return;
-                }
-
-                // Give old item back
-                if (!player.giveItemStack(currentSlot.copy())) {
-                    player.dropItem(currentSlot.copy(), false);
-                }
-
-                // Place new item
-                ItemStack toPlace = requestedStack.copy();
-                toPlace.setCount(1);
-                component.setAstronomyStack(toPlace);
-
-                // Sync to client
-                ServerPlayNetworking.send(player, new SyncSlotPayload(toPlace));
-                AstronomyMod.LOGGER.info("Swapped astronomy slot items");
+                AstronomyMod.LOGGER.warn("Swap operation failed - no valid item on cursor");
             });
         });
 
