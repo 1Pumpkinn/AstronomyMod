@@ -21,7 +21,7 @@ public class ModModelProvider extends FabricModelProvider {
     @Override
     public void generateItemModels(ItemModelGenerator itemModelGenerator) {
         // Generate basic item models
-        //itemModelGenerator.register(ModItems.PLANET_ITEM, Models.GENERATED);
+        itemModelGenerator.register(ModItems.PLANET_ITEM, Models.GENERATED);
         itemModelGenerator.register(ModItems.SUPERNOVA_ITEM, Models.GENERATED);
         itemModelGenerator.register(ModItems.BLACKHOLE_ITEM, Models.GENERATED);
         itemModelGenerator.register(ModItems.NEUTRON_STAR_ITEM, Models.GENERATED);
