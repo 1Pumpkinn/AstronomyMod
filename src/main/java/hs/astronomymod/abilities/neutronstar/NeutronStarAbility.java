@@ -1,6 +1,7 @@
 package hs.astronomymod.abilities.neutronstar;
 
 import hs.astronomymod.abilities.Ability;
+import hs.astronomymod.abilities.AbilityActivation;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
@@ -47,7 +48,7 @@ public class NeutronStarAbility implements Ability {
     }
 
     @Override
-    public void applyActive(ServerPlayerEntity player) {
+    public boolean applyActive(ServerPlayerEntity player, AbilityActivation activation) {
         // Active: Magnetic Storm - massive electromagnetic pulse
         Vec3d playerPos = player.getEntityPos();
         List<net.minecraft.entity.LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
@@ -121,6 +122,8 @@ public class NeutronStarAbility implements Ability {
                         Math.sin(angle) * Math.sin(vertAngle), 0.3);
             }
         }
+
+        return true;
     }
 
     @Override

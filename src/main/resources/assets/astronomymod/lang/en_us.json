@@ -21,5 +21,8 @@
   "message.astronomymod.fully_upgraded": "This item is already fully upgraded!",
   "message.astronomymod.hold_astronomy_item": "Hold an Astronomy Item in your other hand!",
   "message.astronomymod.upgraded": "Upgraded to %s shard(s)!",
-  "message.astronomymod.need_shards": "Need 3 shards to use active ability!"
+  "message.astronomymod.need_shards": "§cNeed %s shards to use this ability!",
+  "message.astronomymod.overloaded": "§cSystems overloaded! Wait for them to cool down.",
+
+  "hud.astronomymod.overload": "Overload"
 }

@@ -1,9 +1,13 @@
 package hs.astronomymod.client;
 
+import hs.astronomymod.abilities.AbilityActivation;
 import hs.astronomymod.item.AstronomyItem;
+import hs.astronomymod.network.AstronomyPackets;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,8 +19,14 @@ public class AstronomySlotComponent {
     // Client-side singleton
     private static final AstronomySlotComponent CLIENT_INSTANCE = new AstronomySlotComponent();
 
+    private static final float MAX_OVERLOAD = 6.0f;
+    private static final int OVERLOAD_RECOVERY_TICKS = 35 * 20;
+    private static final float OVERLOAD_DECAY_PER_TICK = MAX_OVERLOAD / OVERLOAD_RECOVERY_TICKS;
+    private static final float SYNC_THRESHOLD = 0.02f;
+
     private ItemStack astronomyStack = ItemStack.EMPTY;
-    private int cooldown = 0;
+    private float overloadLevel = 0f;
+    private float lastSyncedOverload = -1f;
 
     // --- Server-side accessor ---
     public static AstronomySlotComponent get(ServerPlayerEntity player) {
@@ -43,7 +53,9 @@ public class AstronomySlotComponent {
         if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem) {
             astronomyItem.applyPassiveAbility(player);
         }
-        if (cooldown > 0) cooldown--;
+        if (decayOverloadInternal()) {
+            syncOverload(player);
+        }
     }
 
     // --- Client tick: visuals/passive ---
@@ -56,19 +68,19 @@ public class AstronomySlotComponent {
         if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem) {
             astronomyItem.applyPassiveAbilityClient(player);
         }
-        if (cooldown > 0) cooldown--;
+        decayOverloadInternal();
     }
 
     // --- Trigger active ability (via keybind) ---
-    public void activateAbility(ServerPlayerEntity player) {
-        if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem && cooldown <= 0) {
-            int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+    public void activateAbility(ServerPlayerEntity player, AbilityActivation activation) {
+        if (isOverloaded()) {
+            player.sendMessage(Text.translatable("message.astronomymod.overloaded"), true);
+            return;
+        }
 
-            if (shards >= 3) {
-                astronomyItem.applyActiveAbility(player);
-                cooldown = 600; // 30s cooldown (600 ticks = 30 seconds)
-            } else {
-                player.sendMessage(net.minecraft.text.Text.literal("§cNeed 3 shards to use active ability!"), true);
+        if (!astronomyStack.isEmpty() && astronomyStack.getItem() instanceof AstronomyItem astronomyItem) {
+            if (astronomyItem.applyActiveAbility(player, activation)) {
+                increaseOverload(player);
             }
         }
     }
@@ -93,11 +105,40 @@ public class AstronomySlotComponent {
         }
     }
 
-    public int getCooldown() {
-        return cooldown;
+    public float getOverloadLevel() {
+        return overloadLevel;
     }
 
-    public void setCooldown(int cooldown) {
-        this.cooldown = cooldown;
+    public void setOverloadLevel(float overloadLevel) {
+        this.overloadLevel = Math.max(0f, Math.min(MAX_OVERLOAD, overloadLevel));
+    }
+
+    public static float getMaxOverload() {
+        return MAX_OVERLOAD;
+    }
+
+    private void increaseOverload(ServerPlayerEntity player) {
+        overloadLevel = Math.min(MAX_OVERLOAD, overloadLevel + 1f);
+        syncOverload(player);
+    }
+
+    private boolean decayOverloadInternal() {
+        if (overloadLevel <= 0f) return false;
+        float newLevel = Math.max(0f, overloadLevel - OVERLOAD_DECAY_PER_TICK);
+        if (Math.abs(newLevel - overloadLevel) > 0.0001f) {
+            overloadLevel = newLevel;
+            return true;
+        }
+        return false;
+    }
+
+    private boolean isOverloaded() {
+        return overloadLevel >= MAX_OVERLOAD - 0.0001f;
+    }
+
+    private void syncOverload(ServerPlayerEntity player) {
+        if (Math.abs(overloadLevel - lastSyncedOverload) < SYNC_THRESHOLD) return;
+        lastSyncedOverload = overloadLevel;
+        ServerPlayNetworking.send(player, new AstronomyPackets.SyncOverloadPayload(overloadLevel));
     }
 }

@@ -1,6 +1,7 @@
 package hs.astronomymod.item;
 
 import hs.astronomymod.abilities.Ability;
+import hs.astronomymod.abilities.AbilityActivation;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -27,10 +28,11 @@ public abstract class AstronomyItem extends Item {
         }
     }
 
-    public void applyActiveAbility(ServerPlayerEntity player) {
+    public boolean applyActiveAbility(ServerPlayerEntity player, AbilityActivation activation) {
         if (ability != null) {
-            ability.applyActive(player);
+            return ability.applyActive(player, activation);
         }
+        return false;
     }
 
     // --- Client-only logic (optional visuals) ---

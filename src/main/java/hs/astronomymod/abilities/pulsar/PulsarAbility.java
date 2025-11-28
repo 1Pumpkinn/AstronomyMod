@@ -1,6 +1,7 @@
 package hs.astronomymod.abilities.pulsar;
 
 import hs.astronomymod.abilities.Ability;
+import hs.astronomymod.abilities.AbilityActivation;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -69,7 +70,7 @@ public class PulsarAbility implements Ability {
     }
 
     @Override
-    public void applyActive(ServerPlayerEntity player) {
+    public boolean applyActive(ServerPlayerEntity player, AbilityActivation activation) {
         // Active: EM Superpulse - extreme electromagnetic pulse causing sensory overload
         Vec3d playerPos = player.getEntityPos();
         List<LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
@@ -169,6 +170,8 @@ public class PulsarAbility implements Ability {
                 }
             }
         }
+
+        return true;
     }
 
     @Override

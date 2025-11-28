@@ -1,6 +1,7 @@
 package hs.astronomymod.network;
 
 import hs.astronomymod.AstronomyMod;
+import hs.astronomymod.abilities.AbilityActivation;
 import hs.astronomymod.client.AstronomySlotComponent;
 import hs.astronomymod.item.AstronomyItem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -20,6 +21,9 @@ public class AstronomyPackets {
 
     public static final CustomPayload.Id<SyncSlotPayload> SYNC_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "sync_slot"));
+
+    public static final CustomPayload.Id<SyncOverloadPayload> SYNC_OVERLOAD_ID =
+            new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "sync_overload"));
 
     public static final CustomPayload.Id<PlaceInSlotPayload> PLACE_IN_SLOT_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "place_in_slot"));
@@ -51,8 +55,9 @@ public class AstronomyPackets {
                 var player = context.player();
                 AstronomySlotComponent component = AstronomySlotComponent.get(player);
                 if (component != null) {
-                    component.activateAbility(player);
-                    AstronomyMod.LOGGER.info("Player {} activated astronomy ability", player.getName().getString());
+                    component.activateAbility(player, payload.activation());
+                    AstronomyMod.LOGGER.info("Player {} activated {} astronomy ability",
+                            player.getName().getString(), payload.activation());
                 }
             });
         });
@@ -290,6 +295,7 @@ public class AstronomyPackets {
     // Server-side registration for S2C packets (encoding)
     public static void registerS2CPacketsServer() {
         PayloadTypeRegistry.playS2C().register(SYNC_SLOT_ID, SyncSlotPayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(SYNC_OVERLOAD_ID, SyncOverloadPayload.CODEC);
     }
 
     // Client-side registration for S2C packets (decoding + handling)
@@ -308,13 +314,29 @@ public class AstronomyPackets {
                         syncedStack.isEmpty() ? "EMPTY" : syncedStack.getName().getString());
             });
         });
+
+        ClientPlayNetworking.registerGlobalReceiver(SYNC_OVERLOAD_ID, (payload, context) -> {
+            context.client().execute(() -> {
+                AstronomySlotComponent.getClient().setOverloadLevel(payload.level());
+            });
+        });
     }
 
     // ===== PAYLOAD RECORDS =====
 
-    public record ActivateAbilityPayload() implements CustomPayload {
+    public record ActivateAbilityPayload(AbilityActivation activation) implements CustomPayload {
         public static final PacketCodec<RegistryByteBuf, ActivateAbilityPayload> CODEC =
-                PacketCodec.unit(new ActivateAbilityPayload());
+                new PacketCodec<>() {
+                    @Override
+                    public ActivateAbilityPayload decode(RegistryByteBuf buf) {
+                        return new ActivateAbilityPayload(buf.readEnumConstant(AbilityActivation.class));
+                    }
+
+                    @Override
+                    public void encode(RegistryByteBuf buf, ActivateAbilityPayload value) {
+                        buf.writeEnumConstant(value.activation());
+                    }
+                };
 
         @Override
         public Id<? extends CustomPayload> getId() {
@@ -381,6 +403,26 @@ public class AstronomyPackets {
         @Override
         public Id<? extends CustomPayload> getId() {
             return UPDATE_SLOT_ID;
+        }
+    }
+
+    public record SyncOverloadPayload(float level) implements CustomPayload {
+        public static final PacketCodec<RegistryByteBuf, SyncOverloadPayload> CODEC =
+                new PacketCodec<>() {
+                    @Override
+                    public SyncOverloadPayload decode(RegistryByteBuf buf) {
+                        return new SyncOverloadPayload(buf.readFloat());
+                    }
+
+                    @Override
+                    public void encode(RegistryByteBuf buf, SyncOverloadPayload value) {
+                        buf.writeFloat(value.level());
+                    }
+                };
+
+        @Override
+        public Id<? extends CustomPayload> getId() {
+            return SYNC_OVERLOAD_ID;
         }
     }
 

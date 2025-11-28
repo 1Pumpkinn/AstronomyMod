@@ -5,6 +5,6 @@ import net.minecraft.client.network.ClientPlayerEntity;
 
 public interface Ability {
     void applyPassive(ServerPlayerEntity player);
-    void applyActive(ServerPlayerEntity player);
+    boolean applyActive(ServerPlayerEntity player, AbilityActivation activation);
     void applyPassiveClient(ClientPlayerEntity player);
 }

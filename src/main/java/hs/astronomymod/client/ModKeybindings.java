@@ -9,7 +9,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class ModKeybindings {
     public static KeyBinding ACTIVATE_ASTRONOMY_ABILITY;
-    public static KeyBinding SELECT_ASTRONOMY_SLOT;
+    public static KeyBinding ACTIVATE_SECONDARY_ASTRONOMY_ABILITY;
 
     // Correct category using Identifier.of
     public static final Category ASTRONOMY_CATEGORY = new Category(
@@ -24,7 +24,7 @@ public class ModKeybindings {
                 ASTRONOMY_CATEGORY
         ));
 
-        SELECT_ASTRONOMY_SLOT = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+        ACTIVATE_SECONDARY_ASTRONOMY_ABILITY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.astronomymod.ability_2",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_R,
