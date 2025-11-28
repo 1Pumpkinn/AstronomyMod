@@ -2,6 +2,7 @@ package hs.astronomymod.abilities.blackhole;
 
 import hs.astronomymod.abilities.Ability;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
@@ -14,129 +15,257 @@ import net.minecraft.util.math.Vec3d;
 import java.util.List;
 
 public class BlackholeAbility implements Ability {
+
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Fetch the equipped astronomy item stack
         net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
         int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
-        
-        // Passive Effect 1: Void Protection (requires exactly 1 shard or more)
+
+        // Apply passive effects based on shard count
         if (shards >= 1) {
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOW_FALLING, 40, 0, false, false, false));
-            player.addStatusEffect(new StatusEffectInstance(StatusEffects.WATER_BREATHING, 40, 0, false, false, false));
-        }
-        
-        // Passive Effect 2: Item Magnetism (requires exactly 2 shards or more)
-        if (shards >= 2) {
-            if (player.age % 10 == 0) {
-                List<net.minecraft.entity.ItemEntity> items = player.getEntityWorld().getEntitiesByClass(
-                        net.minecraft.entity.ItemEntity.class,
-                        player.getBoundingBox().expand(8),
-                        e -> true
-                );
-                items.forEach(item -> {
-                    Vec3d direction = player.getEntityPos().subtract(item.getEntityPos()).normalize();
-                    item.setVelocity(direction.multiply(0.3));
-                });
-            }
+            applyPassiveEffect1(player);
         }
 
-        // Dark void particles
-        if (player.getEntityWorld() instanceof ServerWorld serverWorld && player.age % 8 == 0) {
-            Vec3d pos = player.getEntityPos();
-            for (int i = 0; i < 5; i++) {
-                double angle = player.age * 0.15 + i * (Math.PI * 2 / 5);
-                double radius = 1.5;
-                serverWorld.spawnParticles(ParticleTypes.PORTAL,
-                        pos.x + Math.cos(angle) * radius,
-                        pos.y + 0.5 + Math.sin(angle * 2) * 0.5,
-                        pos.z + Math.sin(angle) * radius,
-                        2, 0.1, 0.1, 0.1, 0.05);
-                serverWorld.spawnParticles(ParticleTypes.SQUID_INK,
-                        pos.x + Math.cos(angle) * radius * 0.7,
-                        pos.y + 1,
-                        pos.z + Math.sin(angle) * radius * 0.7,
-                        1, 0, 0, 0, 0);
-            }
+        if (shards >= 2) {
+            applyPassiveEffect2(player);
         }
+
+        // Visual particles (always active)
+        spawnPassiveParticles(player);
     }
 
     @Override
     public void applyActive(ServerPlayerEntity player) {
-        // Active: Singularity Collapse - extreme gravity well
-        Vec3d playerPos = player.getEntityPos();
-        List<net.minecraft.entity.LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
-                net.minecraft.entity.LivingEntity.class,
-                player.getBoundingBox().expand(20),
-                e -> e != player
-        );
+        int shards = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack()
+                .getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
 
-        entities.forEach(entity -> {
-            Vec3d entityPos = entity.getEntityPos();
-            double distance = entityPos.distanceTo(playerPos);
-
-            // Stronger pull the closer they are
-            Vec3d direction = playerPos.subtract(entityPos).normalize();
-            double pullStrength = Math.max(2.0 - (distance * 0.1), 0.3);
-            entity.setVelocity(direction.multiply(pullStrength));
-            entity.velocityModified = true;
-
-            // Damage increases as they get closer
-            float damage = (float) Math.max(8.0 - distance * 0.3, 2.0);
-            entity.damage(player.getEntityWorld().toServerWorld(),
-                    player.getDamageSources().magic(), damage);
-
-            // Crushing effects
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 120, 5));
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 120, 2));
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.MINING_FATIGUE, 120, 3));
-
-            // Void sickness
-            if (distance < 5) {
-                entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WITHER, 60, 1));
-            }
-        });
-
-        // Player becomes ethereal
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.INVISIBILITY, 140, 0, false, false, true));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.RESISTANCE, 140, 3, false, false, true));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SPEED, 140, 2, false, false, true));
-
-        // Gravity collapse particles and sound
-        if (player.getEntityWorld() instanceof ServerWorld serverWorld) {
-            serverWorld.playSound(null, playerPos.x, playerPos.y, playerPos.z,
-                    SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.PLAYERS,
-                    1.5f, 0.5f);
-
-            Vec3d pos = player.getEntityPos();
-            // Create swirling vortex
-            for (int layer = 0; layer < 5; layer++) {
-                double layerRadius = 15 - layer * 3;
-                for (int i = 0; i < 100; i++) {
-                    double angle = (i / 100.0) * Math.PI * 2 + layer * 0.5;
-                    double height = layer * 0.8;
-                    serverWorld.spawnParticles(ParticleTypes.REVERSE_PORTAL,
-                            pos.x + Math.cos(angle) * layerRadius,
-                            pos.y + height,
-                            pos.z + Math.sin(angle) * layerRadius,
-                            1, 0, 0, 0, 0.3);
-                }
-            }
-
-            // Dark center
-            for (int i = 0; i < 50; i++) {
-                serverWorld.spawnParticles(ParticleTypes.SQUID_INK,
-                        pos.x, pos.y + 1, pos.z,
-                        2,
-                        Math.random() - 0.5,
-                        Math.random() - 0.5,
-                        Math.random() - 0.5, 0.1);
-            }
+        if (shards < 3) {
+            // Ability 1: Gravitational Pull
+            applyActiveAbility1(player);
+        } else {
+            // Ability 2: Singularity Collapse (requires 3 shards)
+            applyActiveAbility2(player);
         }
     }
 
     @Override
     public void applyPassiveClient(ClientPlayerEntity player) {
+        // Client-side visual effects if needed
+    }
 
+    // ========================================
+    //         PASSIVE EFFECTS
+    // ========================================
+
+    /**
+     * Passive Effect 1 (1+ shards): Nearby entities get slowness in 6x6 radius
+     */
+    private void applyPassiveEffect1(ServerPlayerEntity player) {
+        List<LivingEntity> nearbyEntities = player.getEntityWorld().getEntitiesByClass(
+                LivingEntity.class,
+                player.getBoundingBox().expand(6),
+                e -> e != player
+        );
+
+        nearbyEntities.forEach(entity -> {
+            entity.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.SLOWNESS, 40, 2, false, false, true
+            ));
+        });
+    }
+
+    /**
+     * Passive Effect 2 (2+ shards): Density/Mace damage immunity
+     */
+    private void applyPassiveEffect2(ServerPlayerEntity player) {
+        // Grant resistance when falling to negate mace density damage
+        if (player.fallDistance > 0) {
+            player.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.RESISTANCE, 2, 4, false, false, false
+            ));
+        }
+    }
+
+    /**
+     * Visual particles for passive effect
+     */
+    private void spawnPassiveParticles(ServerPlayerEntity player) {
+        if (!(player.getEntityWorld() instanceof ServerWorld serverWorld)) return;
+        if (player.age % 8 != 0) return;
+
+        Vec3d pos = player.getEntityPos();
+
+        // Dark portal swirl
+        for (int i = 0; i < 5; i++) {
+            double angle = player.age * 0.15 + i * (Math.PI * 2 / 5);
+            double radius = 1.5;
+
+            serverWorld.spawnParticles(ParticleTypes.PORTAL,
+                    pos.x + Math.cos(angle) * radius,
+                    pos.y + 0.5 + Math.sin(angle * 2) * 0.5,
+                    pos.z + Math.sin(angle) * radius,
+                    2, 0.1, 0.1, 0.1, 0.05);
+
+            serverWorld.spawnParticles(ParticleTypes.SQUID_INK,
+                    pos.x + Math.cos(angle) * radius * 0.7,
+                    pos.y + 1,
+                    pos.z + Math.sin(angle) * radius * 0.7,
+                    1, 0, 0, 0, 0);
+        }
+    }
+
+    // ========================================
+    //         ACTIVE ABILITIES
+    // ========================================
+
+    /**
+     * Active Ability 1: Gravitational Pull
+     * Pulls entities towards player in 6 block radius
+     */
+    private void applyActiveAbility1(ServerPlayerEntity player) {
+        Vec3d playerPos = player.getEntityPos();
+
+        // Find and pull entities
+        List<LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
+                LivingEntity.class,
+                player.getBoundingBox().expand(6),
+                e -> e != player
+        );
+
+        entities.forEach(entity -> {
+            Vec3d entityPos = entity.getEntityPos();
+            Vec3d direction = playerPos.subtract(entityPos).normalize();
+            double pullStrength = 1.2;
+
+            entity.setVelocity(direction.multiply(pullStrength));
+            entity.velocityModified = true;
+        });
+
+        // Sound and particle effects
+        spawnAbility1Effects(player);
+    }
+
+    /**
+     * Active Ability 2: Singularity Collapse (3 shards required)
+     * Extreme pull + hides hearts with custom status effect
+     */
+    private void applyActiveAbility2(ServerPlayerEntity player) {
+        Vec3d playerPos = player.getEntityPos();
+
+        // Find and affect entities
+        List<LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
+                LivingEntity.class,
+                player.getBoundingBox().expand(6),
+                e -> e != player
+        );
+
+        entities.forEach(entity -> {
+            Vec3d entityPos = entity.getEntityPos();
+            Vec3d direction = playerPos.subtract(entityPos).normalize();
+            double pullStrength = 2.5;
+
+            // Extreme gravitational pull
+            entity.setVelocity(direction.multiply(pullStrength));
+            entity.velocityModified = true;
+
+            // Hide hearts with blindness + darkness
+            entity.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.BLINDNESS, 200, 0, false, false, true
+            ));
+            entity.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.DARKNESS, 200, 0, false, false, true
+            ));
+
+            // Additional crushing effects
+            entity.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.SLOWNESS, 200, 5, false, false, true
+            ));
+            entity.addStatusEffect(new StatusEffectInstance(
+                    StatusEffects.WEAKNESS, 200, 3, false, false, true
+            ));
+
+            // Damage
+            float damage = 8.0f;
+            entity.damage(player.getEntityWorld().toServerWorld(),
+                    player.getDamageSources().magic(), damage);
+        });
+
+        // Player becomes ethereal
+        player.addStatusEffect(new StatusEffectInstance(
+                StatusEffects.INVISIBILITY, 140, 0, false, false, true
+        ));
+        player.addStatusEffect(new StatusEffectInstance(
+                StatusEffects.RESISTANCE, 140, 3, false, false, true
+        ));
+
+        // Sound and particle effects
+        spawnAbility2Effects(player);
+    }
+
+    // ========================================
+    //      PARTICLE & SOUND EFFECTS
+    // ========================================
+
+    /**
+     * Visual/audio effects for Ability 1
+     */
+    private void spawnAbility1Effects(ServerPlayerEntity player) {
+        if (!(player.getEntityWorld() instanceof ServerWorld serverWorld)) return;
+
+        Vec3d pos = player.getEntityPos();
+
+        // Sound
+        serverWorld.playSound(null, pos.x, pos.y, pos.z,
+                SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0f, 0.5f);
+
+        // Pulling vortex rings
+        for (int ring = 0; ring < 3; ring++) {
+            double ringRadius = 6 - ring * 2;
+            for (int i = 0; i < 40; i++) {
+                double angle = (i / 40.0) * Math.PI * 2;
+                serverWorld.spawnParticles(ParticleTypes.REVERSE_PORTAL,
+                        pos.x + Math.cos(angle) * ringRadius,
+                        pos.y + 1,
+                        pos.z + Math.sin(angle) * ringRadius,
+                        1, 0, 0, 0, 0.2);
+            }
+        }
+    }
+
+    /**
+     * Visual/audio effects for Ability 2
+     */
+    private void spawnAbility2Effects(ServerPlayerEntity player) {
+        if (!(player.getEntityWorld() instanceof ServerWorld serverWorld)) return;
+
+        Vec3d pos = player.getEntityPos();
+
+        // Dramatic sound
+        serverWorld.playSound(null, pos.x, pos.y, pos.z,
+                SoundEvents.ENTITY_WARDEN_SONIC_BOOM, SoundCategory.PLAYERS, 1.5f, 0.5f);
+
+        // Massive swirling vortex
+        for (int layer = 0; layer < 5; layer++) {
+            double layerRadius = 15 - layer * 3;
+            for (int i = 0; i < 100; i++) {
+                double angle = (i / 100.0) * Math.PI * 2 + layer * 0.5;
+                double height = layer * 0.8;
+                serverWorld.spawnParticles(ParticleTypes.REVERSE_PORTAL,
+                        pos.x + Math.cos(angle) * layerRadius,
+                        pos.y + height,
+                        pos.z + Math.sin(angle) * layerRadius,
+                        1, 0, 0, 0, 0.3);
+            }
+        }
+
+        // Dark center
+        for (int i = 0; i < 50; i++) {
+            serverWorld.spawnParticles(ParticleTypes.SQUID_INK,
+                    pos.x, pos.y + 1, pos.z,
+                    2,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5,
+                    Math.random() - 0.5, 0.1);
+        }
     }
 }
