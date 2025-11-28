@@ -18,14 +18,14 @@ public class ModKeybindings {
 
     public static void registerKeybindings() {
         ACTIVATE_ASTRONOMY_ABILITY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.astronomymod.activate_ability",
+                "key.astronomymod.ability_1",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_V,
                 ASTRONOMY_CATEGORY
         ));
 
         SELECT_ASTRONOMY_SLOT = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.astronomymod.select_slot",
+                "key.astronomymod.ability_2",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_R,
                 ASTRONOMY_CATEGORY

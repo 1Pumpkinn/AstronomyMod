@@ -7,8 +7,8 @@
   "item.astronomymod.astronomy_shard": "Astronomy Shard",
 
   "category.astronomymod.astronomy": "Astronomy Mod",
-  "key.astronomymod.activate_ability": "Activate Astronomy Ability",
-  "key.astronomymod.select_slot": "Select Astronomy Slot",
+  "key.astronomymod.ability_1": "Ability 1",
+  "key.astronomymod.ability_2": "Ability 2",
 
   "tooltip.astronomymod.astronomy_item": "Astronomy Item",
   "tooltip.astronomymod.place_in_slot": "Place in Astronomy Slot",
