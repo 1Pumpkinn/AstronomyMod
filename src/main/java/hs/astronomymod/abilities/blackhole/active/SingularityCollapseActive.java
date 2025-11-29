@@ -37,10 +37,13 @@ public class SingularityCollapseActive implements ActiveAbilityComponent {
             entity.setVelocity(direction.multiply(pullStrength));
             entity.velocityModified = true;
 
-            // Hide hearts with invisibility (custom status effect equivalent)
-            entity.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.INVISIBILITY, 200, 0, false, false, true
-            ));
+            // Hide hearts and hunger with custom status effect
+            var hiddenHeartsEntry = hs.astronomymod.effect.ModStatusEffects.getHiddenHeartsEntry();
+            if (hiddenHeartsEntry != null) {
+                entity.addStatusEffect(new StatusEffectInstance(
+                        hiddenHeartsEntry, 200, 0, false, false, true
+                ));
+            }
             entity.addStatusEffect(new StatusEffectInstance(
                     StatusEffects.BLINDNESS, 200, 0, false, false, true
             ));
