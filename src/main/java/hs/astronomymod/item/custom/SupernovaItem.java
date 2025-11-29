@@ -3,7 +3,6 @@ package hs.astronomymod.item.custom;
 import hs.astronomymod.abilities.supernova.SupernovaAbility;
 import hs.astronomymod.item.AstronomyItem;
 import net.minecraft.text.Text;
-
 import java.util.function.Consumer;
 
 public class SupernovaItem extends AstronomyItem {
@@ -14,33 +13,32 @@ public class SupernovaItem extends AstronomyItem {
     @Override
     protected void addCustomTooltip(Consumer<Text> tooltip, net.minecraft.item.ItemStack stack) {
         int shards = stack.getOrDefault(
-                hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS,
-                0
+                hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0
         );
 
+        tooltip.accept(Text.literal("§cPassive 1: Fire Aspect"));
         if (shards >= 1) {
-            tooltip.accept(Text.literal("§c1 Shard: Stellar Heat"));
-            tooltip.accept(Text.literal("  §7• Fire Immunity"));
-            tooltip.accept(Text.literal("  §7• Night Vision"));
+            tooltip.accept(Text.literal("  §a✓ Active"));
+            tooltip.accept(Text.literal("  §7• All weapons ignite enemies"));
         } else {
-            tooltip.accept(Text.literal("§81 Shard: ???"));
+            tooltip.accept(Text.literal("  §8✗ Requires 1 shard"));
         }
 
+        tooltip.accept(Text.literal("§cPassive 2: Solar Eruption"));
         if (shards >= 2) {
-            tooltip.accept(Text.literal("§c2 Shards: Solar Flare"));
-            tooltip.accept(Text.literal("  §7• Burning Aura"));
-            tooltip.accept(Text.literal("  §7• Speed & Strength"));
+            tooltip.accept(Text.literal("  §a✓ Active"));
+            tooltip.accept(Text.literal("  §7• Triggers at 3 hearts"));
+            tooltip.accept(Text.literal("  §7• 5s invulnerability"));
         } else {
-            tooltip.accept(Text.literal("§82 Shards: ???"));
+            tooltip.accept(Text.literal("  §8✗ Requires 2 shards"));
         }
 
-        if (shards >= 3) {
-            tooltip.accept(Text.literal("§63 Shards: Supernova Explosion"));
-            tooltip.accept(Text.literal("§c1 Shard: Stellar Heat"));
-            tooltip.accept(Text.literal("  §7• Fire Immunity"));
-            tooltip.accept(Text.literal("  §7• Night Vision"));
-        } else {
-            tooltip.accept(Text.literal("§81 Shard: ???"));
-        }
+        tooltip.accept(Text.literal("§6Ability 1: Solar Dash"));
+        tooltip.accept(Text.literal("  §7• Dash 5 blocks"));
+        tooltip.accept(Text.literal("  §7• Ignite enemies in path"));
+
+        tooltip.accept(Text.literal("§6Ability 2: Solar Flare"));
+        tooltip.accept(Text.literal("  §7• Massive explosion"));
+        tooltip.accept(Text.literal("  §7• No terrain damage"));
     }
 }

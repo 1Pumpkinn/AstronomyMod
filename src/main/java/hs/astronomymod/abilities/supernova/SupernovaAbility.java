@@ -6,8 +6,8 @@ import hs.astronomymod.abilities.components.ActiveAbilityComponent;
 import hs.astronomymod.abilities.components.PassiveAbilityComponent;
 import hs.astronomymod.abilities.supernova.active.SolarDashActive;
 import hs.astronomymod.abilities.supernova.active.SolarFlareActive;
+import hs.astronomymod.abilities.supernova.passive.FireAspectPassive;
 import hs.astronomymod.abilities.supernova.passive.SolarEruptionPassive;
-import hs.astronomymod.abilities.supernova.passive.StellarHeatPassive;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -20,7 +20,7 @@ import java.util.List;
 public class SupernovaAbility implements Ability {
 
     private final List<PassiveAbilityComponent> passiveAbilities = List.of(
-            new StellarHeatPassive(),
+            new FireAspectPassive(),
             new SolarEruptionPassive()
     );
 

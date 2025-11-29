@@ -109,4 +109,3 @@ public class SolarEruptionPassive implements PassiveAbilityComponent {
         private int cooldown = 0;
     }
 }
-

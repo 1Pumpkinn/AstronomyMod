@@ -2,108 +2,84 @@ package hs.astronomymod.abilities.planet;
 
 import hs.astronomymod.abilities.Ability;
 import hs.astronomymod.abilities.AbilityActivation;
+import hs.astronomymod.abilities.components.ActiveAbilityComponent;
+import hs.astronomymod.abilities.components.PassiveAbilityComponent;
+import hs.astronomymod.abilities.planet.active.GravityFlingActive;
+import hs.astronomymod.abilities.planet.active.LightningStrikeActive;
+import hs.astronomymod.abilities.planet.passive.HastePassive;
+import hs.astronomymod.abilities.planet.passive.NoFallDamagePassive;
 import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
 
 public class PlanetAbility implements Ability {
+
+    private final List<PassiveAbilityComponent> passiveAbilities = List.of(
+            new NoFallDamagePassive(),
+            new HastePassive()
+    );
+
+    private final ActiveAbilityComponent primaryActive = new LightningStrikeActive();
+    private final ActiveAbilityComponent secondaryActive = new GravityFlingActive();
+
     @Override
     public void applyPassive(ServerPlayerEntity player) {
-        // Fetch the equipped astronomy item stack
-        net.minecraft.item.ItemStack astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
-        int shards = astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
-        
-        // Passive Effect 1: Slow Falling & Step Assist (requires exactly 1 shard or more)
-        if (shards >= 1) {
-            player.addStatusEffect(new StatusEffectInstance(
-                    StatusEffects.SLOW_FALLING, 40, 0, false, false, false
-            ));
-            // Step assist (like a horse)
-            player.getAttributeInstance(EntityAttributes.STEP_HEIGHT)
-                    .setBaseValue(1.0);
-        }
-        
-        // Passive Effect 2: Periodic Regeneration (requires exactly 2 shards or more)
-        if (shards >= 2) {
-            if (player.age % 80 == 0) {
-                player.addStatusEffect(new StatusEffectInstance(
-                        StatusEffects.REGENERATION, 80, 1, false, false, true
-                ));
-            }
-        }
+        int shards = getShardCount(player);
 
-        // Atmospheric particles
-        if (player.getEntityWorld() instanceof ServerWorld serverWorld && player.age % 10 == 0) {
-            Vec3d pos = player.getEntityPos();
-            for (int i = 0; i < 3; i++) {
-                double angle = (player.age + i * 120) * 0.05;
-                double radius = 1.5;
-                serverWorld.spawnParticles(ParticleTypes.END_ROD,
-                        pos.x + Math.cos(angle) * radius,
-                        pos.y + 1,
-                        pos.z + Math.sin(angle) * radius,
-                        1, 0, 0, 0, 0);
-            }
-        }
+        passiveAbilities.stream()
+                .filter(passive -> shards >= passive.getRequiredShards())
+                .forEach(passive -> passive.apply(player));
+
+        // Handle fling state ticking
+        GravityFlingActive.tickFlingState(player);
+
+        spawnPassiveParticles(player);
     }
 
     @Override
     public boolean applyActive(ServerPlayerEntity player, AbilityActivation activation) {
-        // Active: Gravitational Singularity - massive pull and levitation
-        Vec3d playerPos = player.getEntityPos();
-        List<net.minecraft.entity.LivingEntity> entities =
-                player.getEntityWorld().getEntitiesByClass(
-                        net.minecraft.entity.LivingEntity.class,
-                        player.getBoundingBox().expand(15),
-                        e -> e != player
-                );
+        int shards = getShardCount(player);
+        ActiveAbilityComponent ability = activation == AbilityActivation.SECONDARY ? secondaryActive : primaryActive;
 
-        entities.forEach(entity -> {
-            // Strong pull toward player
-            Vec3d entityPos = entity.getEntityPos();
-            Vec3d direction = playerPos.subtract(entityPos).normalize();
-            entity.setVelocity(direction.multiply(1.2));
+        if (ability == null) return false;
 
-            // Apply levitation and slowness
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 60, 2));
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 100, 3));
-            entity.addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 100, 1));
-        });
-
-        // Player gets massive resistance and absorption
-        player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.RESISTANCE, 120, 2, false, false, true
-        ));
-        player.addStatusEffect(new StatusEffectInstance(
-                StatusEffects.ABSORPTION, 120, 3, false, false, true
-        ));
-
-        // Gravitational vortex particles
-        if (player.getEntityWorld() instanceof ServerWorld serverWorld) {
-            Vec3d pos = player.getEntityPos();
-            for (int i = 0; i < 60; i++) {
-                double angle = (i / 60.0) * Math.PI * 2;
-                double radius = 3 + (i % 10);
-                serverWorld.spawnParticles(ParticleTypes.PORTAL,
-                        pos.x + Math.cos(angle) * radius,
-                        pos.y + 0.5 + (i % 5) * 0.5,
-                        pos.z + Math.sin(angle) * radius,
-                        1, 0, 0, 0, 0.1);
-            }
+        if (shards < ability.getRequiredShards()) {
+            player.sendMessage(Text.translatable("message.astronomymod.need_shards", ability.getRequiredShards()), true);
+            return false;
         }
 
+        ability.activate(player);
         return true;
     }
 
     @Override
     public void applyPassiveClient(ClientPlayerEntity player) {
+        // Client-side visual effects if needed
+    }
 
+    private int getShardCount(ServerPlayerEntity player) {
+        var astronomyStack = hs.astronomymod.client.AstronomySlotComponent.get(player).getAstronomyStack();
+        return astronomyStack.getOrDefault(hs.astronomymod.component.ModComponents.ASTRONOMY_SHARDS, 0);
+    }
+
+    private void spawnPassiveParticles(ServerPlayerEntity player) {
+        if (!(player.getEntityWorld() instanceof ServerWorld serverWorld)) return;
+        if (player.age % 10 != 0) return;
+
+        Vec3d pos = player.getEntityPos();
+        for (int i = 0; i < 3; i++) {
+            double angle = (player.age + i * 120) * 0.05;
+            double radius = 1.5;
+            serverWorld.spawnParticles(ParticleTypes.END_ROD,
+                    pos.x + Math.cos(angle) * radius,
+                    pos.y + 1,
+                    pos.z + Math.sin(angle) * radius,
+                    1, 0, 0, 0, 0);
+        }
     }
 }
