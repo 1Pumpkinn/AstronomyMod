@@ -14,7 +14,7 @@ public class ModStatusEffects {
             RegistryKeys.STATUS_EFFECT,
             Identifier.of(AstronomyMod.MOD_ID, "stun")
     );
-    
+
     public static final StatusEffect STUN = Registry.register(
             Registries.STATUS_EFFECT,
             STUN_KEY,
@@ -25,7 +25,7 @@ public class ModStatusEffects {
             RegistryKeys.STATUS_EFFECT,
             Identifier.of(AstronomyMod.MOD_ID, "hidden_hearts")
     );
-    
+
     public static final StatusEffect HIDDEN_HEARTS = Registry.register(
             Registries.STATUS_EFFECT,
             HIDDEN_HEARTS_KEY,
@@ -33,15 +33,24 @@ public class ModStatusEffects {
     );
 
     public static RegistryEntry<StatusEffect> getStunEntry() {
-        return Registries.STATUS_EFFECT.getOrThrow(STUN_KEY);
+        try {
+            return Registries.STATUS_EFFECT.getOrThrow(STUN_KEY);
+        } catch (Exception e) {
+            AstronomyMod.LOGGER.error("Failed to get STUN status effect entry", e);
+            return null;
+        }
     }
 
     public static RegistryEntry<StatusEffect> getHiddenHeartsEntry() {
-        return Registries.STATUS_EFFECT.getOrThrow(HIDDEN_HEARTS_KEY);
+        try {
+            return Registries.STATUS_EFFECT.getOrThrow(HIDDEN_HEARTS_KEY);
+        } catch (Exception e) {
+            AstronomyMod.LOGGER.error("Failed to get HIDDEN_HEARTS status effect entry", e);
+            return null;
+        }
     }
 
     public static void registerStatusEffects() {
         AstronomyMod.LOGGER.info("Registering Astronomy Mod Status Effects");
     }
 }
-
