@@ -11,46 +11,45 @@ import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
 
+/**
+ * Gravitational Shockwave: Pushes all nearby entities outward from the player, dealing damage and launching them slightly up.
+ */
 public class GravitationalShockwaveActive implements ActiveAbilityComponent {
+    private static final double SHOCKWAVE_RADIUS = 10.0;
+    private static final double SHOCKWAVE_PUSH = 1.5;
+    private static final double SHOCKWAVE_Y_BOOST = 0.5;
+    private static final float SHOCKWAVE_DAMAGE = 6.0f;
     @Override
     public int getRequiredShards() {
         return 0;
     }
-
     @Override
     public void activate(ServerPlayerEntity player) {
         Vec3d playerPos = player.getEntityPos();
         List<LivingEntity> entities = player.getEntityWorld().getEntitiesByClass(
                 LivingEntity.class,
-                player.getBoundingBox().expand(10),
+                player.getBoundingBox().expand(SHOCKWAVE_RADIUS),
                 e -> e != player
         );
-
+        if (entities.isEmpty()) {
+            player.sendMessage(net.minecraft.text.Text.literal("§7No valid targets for Gravitational Shockwave!"), true);
+            return;
+        }
         entities.forEach(entity -> {
             Vec3d entityPos = entity.getEntityPos();
-            Vec3d direction = entityPos.subtract(playerPos).normalize();
-
-            entity.setVelocity(direction.multiply(1.5).add(0, 0.5, 0));
+            Vec3d direction = entityPos.subtract(playerPos);
+            direction = direction.lengthSquared() > 1e-5 ? direction.normalize() : new Vec3d(0,1,0);
+            entity.setVelocity(direction.multiply(SHOCKWAVE_PUSH).add(0, SHOCKWAVE_Y_BOOST, 0));
             entity.velocityModified = true;
-
-            float damage = 6.0f;
-            entity.damage(player.getEntityWorld().toServerWorld(),
-                    player.getDamageSources().magic(), damage);
+            entity.damage(player.getEntityWorld().toServerWorld(), player.getDamageSources().magic(), SHOCKWAVE_DAMAGE);
         });
-
         spawnShockwaveEffects(player);
     }
-
     private void spawnShockwaveEffects(ServerPlayerEntity player) {
         if (!(player.getEntityWorld() instanceof ServerWorld serverWorld)) return;
-
         Vec3d pos = player.getEntityPos();
-
-        serverWorld.playSound(null, pos.x, pos.y, pos.z,
-                SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS,
-                2.0f, 0.6f);
-
-        // Expanding rings
+        serverWorld.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BLOCK_BEACON_ACTIVATE, SoundCategory.PLAYERS, 2.0f, 0.6f);
+        // Expanding rings for visual effect
         for (int ring = 0; ring < 4; ring++) {
             double ringRadius = 3 + ring * 2;
             for (int i = 0; i < 60; i++) {
@@ -63,7 +62,6 @@ public class GravitationalShockwaveActive implements ActiveAbilityComponent {
                         1, 0, 0, 0, 0.1);
             }
         }
-
         // Core pulse
         for (int i = 0; i < 30; i++) {
             double angle = Math.random() * Math.PI * 2;

@@ -39,6 +39,7 @@ public class AstronomymodClient implements ClientModInitializer {
 
         // Keybind tick event
         ClientTickEvents.END_CLIENT_TICK.register(c -> {
+
             // Activate primary ability keybind
             while (ModKeybindings.ACTIVATE_ASTRONOMY_ABILITY.wasPressed()) {
                 if (ClientPlayNetworking.canSend(AstronomyPackets.ACTIVATE_ABILITY_ID)) {

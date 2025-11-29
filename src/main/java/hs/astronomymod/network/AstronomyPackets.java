@@ -47,6 +47,8 @@ public class AstronomyPackets {
     public static final CustomPayload.Id<SwapSlotCreativePayload> SWAP_SLOT_CREATIVE_ID =
             new CustomPayload.Id<>(Identifier.of(AstronomyMod.MOD_ID, "swap_slot_creative"));
 
+    // ====== PACKET REGISTRATION ======
+    // Registers all C2S (client to server) packets
     public static void registerC2SPackets() {
         // Register activate ability packet
         PayloadTypeRegistry.playC2S().register(ACTIVATE_ABILITY_ID, ActivateAbilityPayload.CODEC);
@@ -292,36 +294,28 @@ public class AstronomyPackets {
         });
     }
 
-    // Server-side registration for S2C packets (encoding)
+    // Registers all S2C (server to client) packets and handlers
     public static void registerS2CPacketsServer() {
         PayloadTypeRegistry.playS2C().register(SYNC_SLOT_ID, SyncSlotPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(SYNC_OVERLOAD_ID, SyncOverloadPayload.CODEC);
     }
-
-    // Client-side registration for S2C packets (decoding + handling)
     public static void registerS2CPacketsClient() {
-        // Register client handler for sync packets
-        // Note: Payload type is already registered on server side
         ClientPlayNetworking.registerGlobalReceiver(SYNC_SLOT_ID, (payload, context) -> {
             context.client().execute(() -> {
                 AstronomySlotComponent clientComponent = AstronomySlotComponent.getClient();
                 ItemStack syncedStack = payload.stack();
-
                 // Update client-side component with server's authoritative state
                 clientComponent.setAstronomyStack(syncedStack);
-
                 AstronomyMod.LOGGER.info("Client received sync: {}",
                         syncedStack.isEmpty() ? "EMPTY" : syncedStack.getName().getString());
             });
         });
-
         ClientPlayNetworking.registerGlobalReceiver(SYNC_OVERLOAD_ID, (payload, context) -> {
             context.client().execute(() -> {
                 AstronomySlotComponent.getClient().setOverloadLevel(payload.level());
             });
         });
     }
-
     // ===== PAYLOAD RECORDS =====
 
     public record ActivateAbilityPayload(AbilityActivation activation) implements CustomPayload {
